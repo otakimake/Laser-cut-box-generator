@@ -381,11 +381,11 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
         topPoints = [];
         topPoints.push({ x: 0, y: 0 });
         
-        // Beautiful 5mm ergonomic front pull lip/tab
+        // Beautiful 17mm ergonomic front pull lip/tab
         const lipWidth = Math.min(40, W_lid - 20);
         const lipStart = (W_lid - lipWidth) / 2;
         const lipEnd = lipStart + lipWidth;
-        const lipDepth = 5; // 5mm protrusion
+        const lipDepth = 17; // 17mm protrusion
 
         topPoints.push({ x: lipStart, y: 0 });
         topPoints.push({ x: lipStart + 3, y: -lipDepth });
@@ -474,15 +474,43 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
   }
   let frontPoints = generatePanelPoints(W, fHeight, t, Nu, Nh, 'female', 'male', topEdgeTypeFront, 'male', kerf);
 
+  if (boxType === 'removable-lid' && lidType === 'sliding') {
+    // To ensure the finger joints on the left and right edges perfectly align with the side panels (which have height H),
+    // we generate the panel at full height H, and then flat-cut/clip it at y = fHeight using a robust polygon clipping algorithm.
+    const fullFrontPoints = generatePanelPoints(W, H, t, Nu, Nh, 'female', 'male', 'flat', 'male', kerf);
+    const clippedPoints: Point2D[] = [];
+    
+    for (let i = 0; i < fullFrontPoints.length; i++) {
+      const p1 = fullFrontPoints[i];
+      const p2 = fullFrontPoints[(i + 1) % fullFrontPoints.length];
+      
+      if (p1.y <= fHeight) {
+        clippedPoints.push(p1);
+      }
+      
+      // Check for crossing fHeight
+      if ((p1.y <= fHeight && p2.y > fHeight) || (p1.y > fHeight && p2.y <= fHeight)) {
+        let intersectX = p1.x;
+        if (Math.abs(p2.y - p1.y) > 0.00001) {
+          intersectX = p1.x + (p2.x - p1.x) * (fHeight - p1.y) / (p2.y - p1.y);
+        }
+        clippedPoints.push({ x: intersectX, y: fHeight });
+      }
+    }
+    
+    if (clippedPoints.length > 2) {
+      frontPoints = clippedPoints;
+    }
+  }
+
   if (boxType === 'removable-lid' && lidType === 'hinged') {
-    // Modify the top edge of the front panel to add the notch so the 5mm lid lip sits within the box
+    // Modify the top edge of the front panel to add the notch so the 17mm lid lip sits within the box perfectly
     const W_lid = W - 2 * t - 1.0;
     const lipWidth = Math.min(40, W_lid - 20);
     const notchWidth = lipWidth + 6; // 3mm clearance on each side
     const notchStart = (W - notchWidth) / 2;
     const notchEnd = notchStart + notchWidth;
-    const notchDepth = 6 + t / 2; // Goes down to the hinge bottom height
-    const notchBottomY = H - notchDepth;
+    const notchDepth = 12.5 + t / 2; // 12.5mm + t/2 depth for comfortable clearance under the 17mm lip
 
     const newPoints: Point2D[] = [];
     let modified = false;
@@ -492,12 +520,14 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       
       newPoints.push(p);
 
-      // Check if this segment represents the flat top edge going from x = W to x = 0 at y = H
-      if (!modified && Math.abs(p.x - W) < 0.1 && Math.abs(p.y - H) < 0.1 && Math.abs(next.x) < 0.1 && Math.abs(next.y - H) < 0.1) {
-        newPoints.push({ x: notchEnd, y: H });
+      // Check if this segment represents the flat top edge going from x ≈ W to x ≈ 0 at y ≈ H
+      if (!modified && p.y > fHeight - 5 && next.y > fHeight - 5 && p.x > W - 5 && next.x < 5) {
+        const currentY = p.y;
+        const notchBottomY = currentY - notchDepth;
+        newPoints.push({ x: notchEnd, y: currentY });
         newPoints.push({ x: notchEnd, y: notchBottomY });
         newPoints.push({ x: notchStart, y: notchBottomY });
-        newPoints.push({ x: notchStart, y: H });
+        newPoints.push({ x: notchStart, y: currentY });
         modified = true;
       }
     }
@@ -813,15 +843,16 @@ export function exportToSVG(
   const { sheetWidth, sheetHeight, sheetsCount, placedPanels } = nesting;
   const verticalGap = 20; // 20mm gap between physical stacked cutout boards
   const totalSvgHeight = sheetsCount * sheetHeight + (sheetsCount - 1) * verticalGap;
+  const SCALE = 3.779527559; // 96 DPI scale conversion (96 pixels per inch / 25.4 mm per inch) to guarantee perfect physical scale
 
   let svg = `<?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${sheetWidth} ${totalSvgHeight}" width="${sheetWidth}mm" height="${totalSvgHeight}mm">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${(sheetWidth * SCALE).toFixed(3)} ${(totalSvgHeight * SCALE).toFixed(3)}" width="${sheetWidth}mm" height="${totalSvgHeight}mm">
   <style>
-    .cut-path { fill: none; stroke: #ff0000; stroke-width: 0.1; stroke-linecap: round; stroke-linejoin: round; }
-    .engrave { fill: none; stroke: #0000ff; stroke-width: 0.2; }
-    .label { font-family: 'Courier New', monospace; font-size: 5px; fill: #0000ff; font-weight: bold; }
-    .sheet-boundary { fill: none; stroke: #94a3b8; stroke-width: 0.3; stroke-dasharray: 2,2; }
-    .sheet-label { font-family: 'Courier New', monospace; font-size: 6px; fill: #94a3b8; font-weight: bold; }
+    .cut-path { fill: none; stroke: #ff0000; stroke-width: 0.378; stroke-linecap: round; stroke-linejoin: round; }
+    .engrave { fill: none; stroke: #0000ff; stroke-width: 0.756; }
+    .label { font-family: 'Courier New', monospace; font-size: ${(5 * SCALE).toFixed(3)}px; fill: #0000ff; font-weight: bold; }
+    .sheet-boundary { fill: none; stroke: #94a3b8; stroke-width: ${(0.3 * SCALE).toFixed(3)}; stroke-dasharray: ${(2 * SCALE).toFixed(1)},${(2 * SCALE).toFixed(1)}; }
+    .sheet-label { font-family: 'Courier New', monospace; font-size: ${(6 * SCALE).toFixed(3)}px; fill: #94a3b8; font-weight: bold; }
   </style>
 `;
 
@@ -836,7 +867,7 @@ export function exportToSVG(
     
     // Draw outer profile
     points.forEach((pt, idx) => {
-      pathD += `${idx === 0 ? 'M' : 'L'} ${(x + pt.x).toFixed(3)} ${(finalY + pt.y).toFixed(3)} `;
+      pathD += `${idx === 0 ? 'M' : 'L'} ${((x + pt.x) * SCALE).toFixed(3)} ${((finalY + pt.y) * SCALE).toFixed(3)} `;
     });
     pathD += 'Z ';
 
@@ -844,7 +875,7 @@ export function exportToSVG(
     if (holes && holes.length > 0) {
       holes.forEach((hole) => {
         hole.forEach((pt, idx) => {
-          pathD += `${idx === 0 ? 'M' : 'L'} ${(x + pt.x).toFixed(3)} ${(finalY + pt.y).toFixed(3)} `;
+          pathD += `${idx === 0 ? 'M' : 'L'} ${((x + pt.x) * SCALE).toFixed(3)} ${((finalY + pt.y) * SCALE).toFixed(3)} `;
         });
         pathD += 'Z ';
       });
@@ -856,7 +887,7 @@ export function exportToSVG(
       engravePaths.forEach((path) => {
         if (path.length === 0) return;
         path.forEach((pt, idx) => {
-          engraveD += `${idx === 0 ? 'M' : 'L'} ${(x + pt.x).toFixed(3)} ${(finalY + pt.y).toFixed(3)} `;
+          engraveD += `${idx === 0 ? 'M' : 'L'} ${((x + pt.x) * SCALE).toFixed(3)} ${((finalY + pt.y) * SCALE).toFixed(3)} `;
         });
         const first = path[0];
         const last = path[path.length - 1];

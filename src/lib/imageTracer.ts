@@ -91,6 +91,110 @@ export function chaikinSubdivide(path: Point[], iterations: number = 2): Point[]
 }
 
 /**
+ * Zhang-Suen Thinning (Skeletonization) algorithm.
+ * Iteratively thins a binary grid of pixels until only a 1-pixel wide skeleton remains.
+ */
+function zhangSuenThinning(grid: Uint8Array, width: number, height: number): Uint8Array {
+  const current = new Uint8Array(grid);
+  let changed = true;
+  const toDelete: number[] = [];
+
+  while (changed) {
+    changed = false;
+
+    // Sub-iteration 1
+    toDelete.length = 0;
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (current[idx] === 0) continue;
+
+        const p2 = current[(y - 1) * width + x];       // N
+        const p3 = current[(y - 1) * width + (x + 1)]; // NE
+        const p4 = current[y * width + (x + 1)];       // E
+        const p5 = current[(y + 1) * width + (x + 1)]; // SE
+        const p6 = current[(y + 1) * width + x];       // S
+        const p7 = current[(y + 1) * width + (x - 1)]; // SW
+        const p8 = current[y * width + (x - 1)];       // W
+        const p9 = current[(y - 1) * width + (x - 1)]; // NW
+
+        const b = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+        if (b < 2 || b > 6) continue;
+
+        let a = 0;
+        if (p2 === 0 && p3 === 1) a++;
+        if (p3 === 0 && p4 === 1) a++;
+        if (p4 === 0 && p5 === 1) a++;
+        if (p5 === 0 && p6 === 1) a++;
+        if (p6 === 0 && p7 === 1) a++;
+        if (p7 === 0 && p8 === 1) a++;
+        if (p8 === 0 && p9 === 1) a++;
+        if (p9 === 0 && p2 === 1) a++;
+
+        if (a !== 1) continue;
+
+        if (p2 * p4 * p6 !== 0) continue;
+        if (p4 * p6 * p8 !== 0) continue;
+
+        toDelete.push(idx);
+      }
+    }
+    if (toDelete.length > 0) {
+      for (let i = 0; i < toDelete.length; i++) {
+        current[toDelete[i]] = 0;
+      }
+      changed = true;
+    }
+
+    // Sub-iteration 2
+    toDelete.length = 0;
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (current[idx] === 0) continue;
+
+        const p2 = current[(y - 1) * width + x];       // N
+        const p3 = current[(y - 1) * width + (x + 1)]; // NE
+        const p4 = current[y * width + (x + 1)];       // E
+        const p5 = current[(y + 1) * width + (x + 1)]; // SE
+        const p6 = current[(y + 1) * width + x];       // S
+        const p7 = current[(y + 1) * width + (x - 1)]; // SW
+        const p8 = current[y * width + (x - 1)];       // W
+        const p9 = current[(y - 1) * width + (x - 1)]; // NW
+
+        const b = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+        if (b < 2 || b > 6) continue;
+
+        let a = 0;
+        if (p2 === 0 && p3 === 1) a++;
+        if (p3 === 0 && p4 === 1) a++;
+        if (p4 === 0 && p5 === 1) a++;
+        if (p5 === 0 && p6 === 1) a++;
+        if (p6 === 0 && p7 === 1) a++;
+        if (p7 === 0 && p8 === 1) a++;
+        if (p8 === 0 && p9 === 1) a++;
+        if (p9 === 0 && p2 === 1) a++;
+
+        if (a !== 1) continue;
+
+        if (p2 * p4 * p8 !== 0) continue;
+        if (p2 * p6 * p8 !== 0) continue;
+
+        toDelete.push(idx);
+      }
+    }
+    if (toDelete.length > 0) {
+      for (let i = 0; i < toDelete.length; i++) {
+        current[toDelete[i]] = 0;
+      }
+      changed = true;
+    }
+  }
+
+  return current;
+}
+
+/**
  * Traces an image's brightness contours using the Marching Squares algorithm with linear interpolation.
  * Returns a list of vectorized closed/open paths with beautifully rounded, high-resolution curves.
  */
@@ -104,7 +208,8 @@ export function traceImage(
   bridgeType?: "global" | "per_island",
   bridgeDir?: "vertical" | "horizontal" | "cross" | "double_vertical" | "double_horizontal",
   islandBridgeMode?: "island_top" | "island_bottom" | "island_left" | "island_right" | "island_top_bottom" | "island_left_right" | "island_all_four",
-  bridgeJitter?: number
+  bridgeJitter?: number,
+  traceCenterline?: boolean
 ): Point[][] {
   const width = imgData.width;
   const height = imgData.height;
@@ -353,6 +458,127 @@ export function traceImage(
         drawClosestBridgeRay(path[xMaxIdx], 0); // Right: aim right
       }
     }
+  }
+
+  // If centerline tracing is requested, perform thinning/skeletonization and trace paths
+  if (traceCenterline) {
+    const grid = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      grid[i] = isActive(intensity[i]) ? 1 : 0;
+    }
+
+    const thinned = zhangSuenThinning(grid, width, height);
+
+    // Track active indices remaining to be traced
+    const activeIndices = new Set<number>();
+    for (let i = 0; i < width * height; i++) {
+      if (thinned[i] === 1) {
+        activeIndices.add(i);
+      }
+    }
+
+    const rawPaths: Point[][] = [];
+
+    // Helper to get remaining active neighbors
+    const getActiveNeighbors = (idx: number): number[] => {
+      const cx = idx % width;
+      const cy = Math.floor(idx / width);
+      const res: number[] = [];
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            const nidx = ny * width + nx;
+            if (activeIndices.has(nidx)) {
+              res.push(nidx);
+            }
+          }
+        }
+      }
+      return res;
+    };
+
+    // Helper to trace a single path from a given starting index
+    const traceFromStart = (startIdx: number) => {
+      if (!activeIndices.has(startIdx)) return;
+
+      const path: Point[] = [];
+      let currentIdx = startIdx;
+      activeIndices.delete(currentIdx);
+      path.push({ x: currentIdx % width, y: Math.floor(currentIdx / width) });
+
+      let done = false;
+      while (!done) {
+        const neighbors = getActiveNeighbors(currentIdx);
+        if (neighbors.length > 0) {
+          // Prefer neighbor with the lowest current degree to follow simple lines first
+          let nextIdx = neighbors[0];
+          let minDegree = 9;
+          for (const n of neighbors) {
+            const deg = getActiveNeighbors(n).length;
+            if (deg < minDegree) {
+              minDegree = deg;
+              nextIdx = n;
+            }
+          }
+
+          activeIndices.delete(nextIdx);
+          path.push({ x: nextIdx % width, y: Math.floor(nextIdx / width) });
+          currentIdx = nextIdx;
+        } else {
+          done = true;
+        }
+      }
+
+      if (path.length >= 3) {
+        // If the start and end of the path are near each other in the skeleton, make sure it closes nicely
+        const pStart = path[0];
+        const pEnd = path[path.length - 1];
+        if (Math.abs(pStart.x - pEnd.x) <= 1.5 && Math.abs(pStart.y - pEnd.y) <= 1.5) {
+          path.push({ ...pStart });
+        }
+        rawPaths.push(path);
+      }
+    };
+
+    // 1. Process from endpoints (pixels with exactly 1 active neighbor) to trace continuous branches
+    const endpoints: number[] = [];
+    for (const idx of activeIndices) {
+      if (getActiveNeighbors(idx).length === 1) {
+        endpoints.push(idx);
+      }
+    }
+
+    for (const ep of endpoints) {
+      traceFromStart(ep);
+    }
+
+    // 2. Process remaining pixels (closed loops, interior parts of junctions)
+    const remaining = Array.from(activeIndices);
+    for (const idx of remaining) {
+      traceFromStart(idx);
+    }
+
+    // Smooth and simplify paths using the standard config
+    let processedPaths = rawPaths;
+    if (smoothEpsilon > 0) {
+      // Light initial Ramer-Douglas-Peucker pass
+      processedPaths = rawPaths.map((path) => ramerDouglasPeucker(path, 0.25));
+
+      // Apply Chaikin subdivision curves
+      const chaikinIterations = Math.min(3, Math.max(1, Math.round(smoothEpsilon * 1.5)));
+      processedPaths = processedPaths.map((path) => chaikinSubdivide(path, chaikinIterations));
+
+      // Binomial moving average pass
+      processedPaths = processedPaths.map((path) => smoothPathCoordinates(path, 2));
+
+      // Final light simplification
+      processedPaths = processedPaths.map((path) => ramerDouglasPeucker(path, smoothEpsilon * 0.15));
+    }
+
+    return processedPaths;
   }
 
   // Helper to retrieve intensity values safely

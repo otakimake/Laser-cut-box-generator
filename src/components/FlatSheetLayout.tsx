@@ -133,44 +133,44 @@ export default function FlatSheetLayout({
   const totalSvgHeight = sheetsCount * sheetHeight + (sheetsCount - 1) * verticalGap;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col gap-5">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col gap-5">
       
       {/* Top Banner Row */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800/80 shadow-md">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400">
+          <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-600">
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-extrabold text-slate-100 uppercase tracking-wide">Laser-Ready Cut Template</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Laser-Ready Cut Template</h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
               Auto-paginates components onto multiple material sheets if they exceed dimensions.
             </p>
           </div>
         </div>
         
         {/* Quick Readout */}
-        <div className="flex flex-wrap items-center gap-4 border-t xl:border-t-0 xl:border-l border-slate-800 pt-3 xl:pt-0 xl:pl-4">
+        <div className="flex flex-wrap items-center gap-4 border-t xl:border-t-0 xl:border-l border-slate-200 pt-3 xl:pt-0 xl:pl-4">
           <div className="text-left">
             <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Board Format</span>
-            <span className="text-xs font-mono font-bold text-blue-300">
-              {sheetWidth.toFixed(0)} <span className="text-[10px] text-slate-600">x</span> {sheetHeight.toFixed(0)} <span className="text-[9px] text-slate-500">mm</span>
+            <span className="text-xs font-mono font-bold text-blue-600">
+              {sheetWidth.toFixed(0)} <span className="text-[10px] text-slate-400">x</span> {sheetHeight.toFixed(0)} <span className="text-[9px] text-slate-500">mm</span>
             </span>
           </div>
-          <div className="text-left border-l border-slate-800 pl-4">
+          <div className="text-left border-l border-slate-200 pl-4">
             <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Required Sheets</span>
-            <span className="text-xs font-mono font-bold text-blue-300">
+            <span className="text-xs font-mono font-bold text-blue-600">
               {sheetsCount} <span className="text-[9px] text-slate-500">{sheetsCount === 1 ? 'board' : 'boards'}</span>
             </span>
           </div>
-          <div className="text-left border-l border-slate-800 pl-4">
+          <div className="text-left border-l border-slate-200 pl-4">
             <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Cut Parts</span>
-            <span className="text-xs font-mono font-bold text-blue-300">
+            <span className="text-xs font-mono font-bold text-blue-600">
               {panels.length} <span className="text-[9px] text-slate-500">planes</span>
             </span>
           </div>
           {hasOverflow && (
-            <div className="bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1.5 animate-pulse shrink-0">
+            <div className="bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1.5 animate-pulse shrink-0">
               <span>⚠️ FIT WARNING</span>
             </div>
           )}
@@ -183,8 +183,8 @@ export default function FlatSheetLayout({
         {/* Left Column Config: Custom material/sheet controls */}
         <div className="lg:col-span-1 flex flex-col gap-4">
           
-          <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl flex flex-col gap-4">
-            <div className="flex items-center gap-1.5 text-[10px] text-blue-400 font-extrabold tracking-wider uppercase select-none">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col gap-4">
+            <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
               <Sliders className="w-3.5 h-3.5" />
               <span>Sheet Dimensions</span>
             </div>
@@ -201,10 +201,10 @@ export default function FlatSheetLayout({
                     value={widthInput}
                     onChange={(e) => handleWidthChange(e.target.value)}
                     onBlur={handleWidthBlur}
-                    className="flex-grow w-full bg-slate-900 border border-slate-800 focus:border-blue-500 text-blue-400 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
+                    className="flex-grow w-full bg-white border border-slate-250 focus:border-blue-600 text-blue-700 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
                     placeholder="W (mm)"
                   />
-                  <div className="bg-slate-800 border-y border-r border-slate-705 text-slate-400 text-[10px] font-extrabold px-2.5 h-8 flex items-center justify-center rounded-r select-none">
+                  <div className="bg-slate-100 border-y border-r border-slate-200 text-slate-500 text-[10px] font-extrabold px-2.5 h-8 flex items-center justify-center rounded-r select-none">
                     W
                   </div>
                 </div>
@@ -220,10 +220,10 @@ export default function FlatSheetLayout({
                     value={heightInput}
                     onChange={(e) => handleHeightChange(e.target.value)}
                     onBlur={handleHeightBlur}
-                    className="flex-grow w-full bg-slate-900 border border-slate-800 focus:border-blue-500 text-blue-400 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
+                    className="flex-grow w-full bg-white border border-slate-250 focus:border-blue-600 text-blue-700 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
                     placeholder="H (mm)"
                   />
-                  <div className="bg-slate-800 border-y border-r border-slate-755 text-slate-400 text-[10px] font-extrabold px-2.5 h-8 flex items-center justify-center rounded-r select-none">
+                  <div className="bg-slate-100 border-y border-r border-slate-200 text-slate-500 text-[10px] font-extrabold px-2.5 h-8 flex items-center justify-center rounded-r select-none">
                     H
                   </div>
                 </div>
@@ -238,17 +238,17 @@ export default function FlatSheetLayout({
                 onSheetWidthChange(Math.ceil(tempNesting.sheetWidth));
                 onSheetHeightChange(Math.ceil(tempNesting.sheetHeight));
               }}
-              className="mt-1.5 flex items-center justify-center gap-2 hover:bg-slate-850 bg-slate-900 border border-slate-850 hover:border-slate-800 py-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-300 transition-all cursor-pointer"
+              className="mt-1.5 flex items-center justify-center gap-2 hover:bg-slate-100 bg-white border border-slate-200 hover:border-slate-300 py-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-700 transition-all cursor-pointer shadow-sm"
               title="Resize the stock sheet to the tightest minimum size fitting all panels."
             >
-              <RotateCcw className="w-3 h-3 text-slate-400" />
+              <RotateCcw className="w-3 h-3 text-slate-500" />
               <span>Reset to Minimum Fit</span>
             </button>
           </div>
 
           {/* Quick Laser Presets selection */}
-          <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl flex flex-col gap-3">
-            <div className="flex items-center gap-1.5 text-[10px] text-blue-400 font-extrabold tracking-wider uppercase select-none">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col gap-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
               <LayoutGrid className="w-3.5 h-3.5" />
               <span>Standard Stock Boards</span>
             </div>
@@ -264,8 +264,8 @@ export default function FlatSheetLayout({
                     }}
                     className={`text-left py-2 px-3 rounded-lg border text-xs transition-all cursor-pointer flex items-center gap-2.5 ${
                       isActive
-                        ? 'bg-blue-600/15 border-blue-500 text-blue-300 font-bold'
-                        : 'bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800 hover:text-slate-200'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold shadow-sm'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800 shadow-sm'
                     }`}
                   >
                     <span className="text-sm shrink-0">{preset.icon}</span>
@@ -277,37 +277,37 @@ export default function FlatSheetLayout({
           </div>
 
           {/* Quick Exports Section */}
-          <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl flex flex-col gap-3 flex-grow justify-start">
-            <div className="flex items-center gap-1.5 text-[10px] text-blue-400 font-extrabold tracking-wider uppercase select-none">
+          <div className="bg-blue-50/50 border border-blue-200 p-4 rounded-xl flex flex-col gap-3 flex-grow justify-start shadow-sm">
+            <div className="flex items-center gap-1.5 text-[10px] text-blue-700 font-extrabold tracking-wider uppercase select-none">
               <Download className="w-3.5 h-3.5" />
               <span>Generate Cut Files</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={onExportSVG}
-                className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-1.5 rounded-lg text-[10px] font-extrabold shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-blue-300 shadow-sm font-extrabold py-2 px-1.5 rounded-lg text-[10px] transition-all active:scale-[0.98] cursor-pointer"
                 title="Download 2D design SVG file"
               >
-                <Download className="w-3 h-3" />
+                <Download className="w-3 h-3 text-blue-600" />
                 <span>SVG Layout</span>
               </button>
               <button
                 onClick={onExportDXF}
-                className="flex items-center justify-center gap-1.5 bg-slate-850 hover:bg-slate-750 text-slate-100 border border-slate-75 font-extrabold py-2 px-1.5 rounded-lg text-[10px] shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm font-extrabold py-2 px-1.5 rounded-lg text-[10px] transition-all active:scale-[0.98] cursor-pointer"
                 title="Download standard 2D DXF CAD file"
               >
-                <Scissors className="w-3 h-3 text-blue-400" />
+                <Scissors className="w-3 h-3 text-blue-600" />
                 <span>DXF CAD</span>
               </button>
             </div>
-            <div className="text-[9.5px] text-slate-500 leading-normal font-medium mt-1">
-              File coordinates set relative to specified <strong className="text-slate-400">{sheetWidth.toFixed(0)}x{sheetHeight.toFixed(0)}mm</strong> boards.
+            <div className="text-[9.5px] text-slate-600 leading-normal font-medium mt-1">
+              File coordinates set relative to specified <strong className="text-slate-800">{sheetWidth.toFixed(0)}x{sheetHeight.toFixed(0)}mm</strong> boards.
             </div>
           </div>
 
           {/* Send to Staff Section */}
-          <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl flex flex-col gap-3">
-            <div className="flex items-center gap-1.5 text-[10px] text-blue-400 font-extrabold tracking-wider uppercase select-none">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col gap-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
               <Send className="w-3.5 h-3.5" />
               <span>Send Layout to Staff</span>
             </div>
@@ -316,7 +316,7 @@ export default function FlatSheetLayout({
               {/* Name Field */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
-                  <User className="w-3 h-3 text-slate-600" />
+                  <User className="w-3 h-3 text-slate-400" />
                   Name
                 </label>
                 <input
@@ -327,14 +327,14 @@ export default function FlatSheetLayout({
                     localStorage.setItem('kapiti_laser_senderName', e.target.value);
                   }}
                   placeholder="Your Name"
-                  className="w-full bg-slate-900 border border-slate-850 focus:border-blue-500 text-slate-200 text-xs rounded py-1.5 px-2.5 focus:outline-none"
+                  className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none"
                 />
               </div>
 
               {/* Email Field */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
-                  <Mail className="w-3 h-3 text-slate-600" />
+                  <Mail className="w-3 h-3 text-slate-400" />
                   Email
                 </label>
                 <input
@@ -345,14 +345,14 @@ export default function FlatSheetLayout({
                     localStorage.setItem('kapiti_laser_senderEmail', e.target.value);
                   }}
                   placeholder="your.email@example.com"
-                  className="w-full bg-slate-900 border border-slate-850 focus:border-blue-500 text-slate-200 text-xs rounded py-1.5 px-2.5 focus:outline-none"
+                  className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none"
                 />
               </div>
 
               {/* Notes Field */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3 text-slate-600" />
+                  <MessageSquare className="w-3 h-3 text-slate-400" />
                   Notes / Instructions
                 </label>
                 <textarea
@@ -363,7 +363,7 @@ export default function FlatSheetLayout({
                   }}
                   placeholder="Material, thickness, specs..."
                   rows={2}
-                  className="w-full bg-slate-900 border border-slate-850 focus:border-blue-500 text-slate-200 text-xs rounded py-1.5 px-2.5 focus:outline-none resize-none"
+                  className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none resize-none"
                 />
               </div>
 
@@ -374,7 +374,7 @@ export default function FlatSheetLayout({
                   }
                 }}
                 disabled={!senderName || !senderEmail}
-                className="mt-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-extrabold py-2 px-3 rounded-lg text-xs shadow-lg transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
+                className="mt-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-450 text-white font-extrabold py-2 px-3 rounded-lg text-xs shadow-sm transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
                 title="Send SVG design directly to Laser Driver website"
               >
                 <Send className="w-3.5 h-3.5" />
@@ -393,7 +393,7 @@ export default function FlatSheetLayout({
         <div className="lg:col-span-3 flex flex-col gap-4 min-h-0">
           
           {/* MULTI_SHEET NAVIGATION TABS */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-950/60 border border-slate-800 p-2 rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50 border border-slate-200 p-2 rounded-xl">
             <div className="flex items-center gap-2 overflow-x-auto p-1 scrollbar-none">
               {Array.from({ length: sheetsCount }).map((_, index) => (
                 <button
@@ -404,8 +404,8 @@ export default function FlatSheetLayout({
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs leading-none transition-all cursor-pointer font-bold ${
                     !showAllSheets && activeSheetIdx === index
-                      ? 'bg-blue-600 text-white shadow shadow-blue-500/20'
-                      : 'bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-400 hover:text-slate-300'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-650 hover:text-slate-800 shadow-sm'
                   }`}
                 >
                   Board {index + 1}
@@ -418,11 +418,11 @@ export default function FlatSheetLayout({
                 onClick={() => setShowAllSheets(!showAllSheets)}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   showAllSheets
-                    ? 'bg-blue-900/40 border border-blue-500/50 text-blue-300'
-                    : 'bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300'
+                    ? 'bg-blue-50 border border-blue-200 text-blue-700'
+                    : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-750 shadow-sm'
                 }`}
               >
-                <Eye className="w-3.5 h-3.5 text-blue-400" />
+                <Eye className="w-3.5 h-3.5 text-blue-600" />
                 <span>{showAllSheets ? 'View Single Board' : 'Show All Boards Stacked'}</span>
               </button>
             )}
@@ -430,13 +430,13 @@ export default function FlatSheetLayout({
 
           {/* Danger/Advisory alerts */}
           {hasOverflow && (
-            <div className="bg-red-500/10 border border-red-500/25 p-3.5 rounded-xl flex gap-3 text-xs leading-relaxed text-red-300">
+            <div className="bg-red-50 border border-red-200 p-3.5 rounded-xl flex gap-3 text-xs leading-relaxed text-red-700">
               <div className="text-base shrink-0 select-none">⛔</div>
               <div>
-                <span className="font-extrabold text-red-200 uppercase tracking-wide">Sheet boundary collision warning</span>
-                <p className="mt-1 text-slate-300">
+                <span className="font-extrabold text-red-800 uppercase tracking-wide">Sheet boundary collision warning</span>
+                <p className="mt-1 text-slate-700">
                   Some laser cut components (
-                  <span className="text-red-200 font-semibold">
+                  <span className="text-red-800 font-semibold">
                     {overflowPanels.map((placed) => placed.panel.name).join(', ')}
                   </span>
                   ) exceed current sheet material bounds. Increase sheet size, use a larger preset, or decrease sheet padding.
@@ -446,7 +446,9 @@ export default function FlatSheetLayout({
           )}
 
           {/* Canvas box */}
-          <div className="relative bg-white rounded-xl border border-slate-200 flex items-center justify-center p-6 overflow-auto max-h-[460px] shadow-inner">
+          <div 
+            className="relative bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center p-6 overflow-auto max-h-[460px] shadow-inner"
+          >
             <svg
               viewBox={showAllSheets ? `0 0 ${sheetWidth} ${totalSvgHeight}` : `0 0 ${sheetWidth} ${sheetHeight}`}
               className="w-full max-w-full h-auto drop-shadow-sm select-none"
@@ -454,11 +456,11 @@ export default function FlatSheetLayout({
             >
               <defs>
                 <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#f1f5f9" strokeWidth="0.3" />
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1e293b" strokeWidth="0.3" />
                 </pattern>
                 <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
                   <rect width="50" height="50" fill="url(#smallGrid)" />
-                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e2e8f0" strokeWidth="0.6" />
+                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#334155" strokeWidth="0.6" />
                 </pattern>
               </defs>
 
@@ -486,7 +488,7 @@ export default function FlatSheetLayout({
                     <text
                       x="10"
                       y="16"
-                      fill="#94a3b8"
+                      fill="#64748b"
                       fontSize="6.5"
                       fontFamily="monospace"
                       fontWeight="extrabold"
@@ -556,18 +558,18 @@ export default function FlatSheetLayout({
                         d={dString}
                         fill={
                           isHovered
-                            ? 'rgba(7, 89, 133, 0.08)'
+                            ? 'rgba(59, 130, 246, 0.15)'
                             : isOverflowing
-                            ? 'rgba(239, 68, 68, 0.1)'
+                            ? 'rgba(239, 68, 68, 0.15)'
                             : 'rgba(230, 215, 195, 0.28)'
                         }
                         fillRule="evenodd"
                         stroke={
                           isHovered
-                            ? '#0284c7'
+                            ? '#3b82f6'
                             : isOverflowing
                             ? '#ef4444'
-                            : '#1e293b'
+                            : '#0f172a'
                         }
                         strokeWidth={isHovered ? '0.85' : isOverflowing ? '0.7' : '0.45'}
                         strokeLinejoin="round"
@@ -581,7 +583,7 @@ export default function FlatSheetLayout({
                         <path
                           d={engraveDString}
                           fill="none"
-                          stroke="#0ea5e9"
+                          stroke="#2563eb"
                           strokeWidth="0.45"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -594,7 +596,7 @@ export default function FlatSheetLayout({
                           d={dString}
                           fill="none"
                           fillRule="evenodd"
-                          stroke="#d97706"
+                          stroke="#f59e0b"
                           strokeWidth="0.12"
                           strokeDasharray="1 3"
                           opacity="0.65"
@@ -631,7 +633,7 @@ export default function FlatSheetLayout({
                       <text
                         x={x + 10}
                         y={offsetY + y + 12}
-                        fill={isOverflowing ? '#b91c1c' : isHovered ? '#0284c7' : '#334155'}
+                        fill={isOverflowing ? '#b91c1c' : isHovered ? '#2563eb' : '#334155'}
                         fontFamily="monospace"
                         fontWeight="bold"
                         fontSize="4.5"
@@ -664,30 +666,30 @@ export default function FlatSheetLayout({
                 onMouseLeave={() => setHoveredPanelId(null)}
                 className={`px-4 py-3 rounded-xl border transition-all duration-150 flex flex-col justify-between ${
                   hoveredPanelId === panel.id
-                    ? 'bg-blue-950/40 border-blue-500/50 shadow-md ring-1 ring-blue-500/20'
+                    ? 'bg-blue-50 border-blue-500/50 shadow-sm ring-1 ring-blue-500/10'
                     : isOverflowing
-                    ? 'bg-red-950/20 border-red-900/30 text-red-200'
-                    : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                    ? 'bg-red-50 border-red-200 text-red-800'
+                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
                 }`}
               >
                 <div className="flex items-start justify-between gap-1.5">
                   <div>
-                    <span className={`text-xs font-bold capitalize flex items-center gap-2 ${isOverflowing ? 'text-red-400' : 'text-slate-200'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${isOverflowing ? 'bg-red-500' : 'bg-blue-500'}`} />
-                      {panel.name} {rotate && <span className="text-yellow-500 text-[10px]" title="Automatically rotated 90 degrees to fit sheet boundaries">🔄</span>}
+                    <span className={`text-xs font-bold capitalize flex items-center gap-2 ${isOverflowing ? 'text-red-600' : 'text-slate-800'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOverflowing ? 'bg-red-500' : 'bg-blue-600'}`} />
+                      {panel.name} {rotate && <span className="text-yellow-600 text-[10px]" title="Automatically rotated 90 degrees to fit sheet boundaries">🔄</span>}
                     </span>
                     <span className="block text-[10px] text-slate-500 mt-0.5 font-mono">
                       ID: {panel.id} • Board {sheetIndex + 1}
                     </span>
                   </div>
                   {isOverflowing && (
-                    <span className="bg-red-500/10 text-red-400 border border-red-500/20 rounded px-1.5 py-0.5 text-[8.5px] font-extrabold tracking-wide uppercase shrink-0">
+                    <span className="bg-red-100 text-red-750 border border-red-200 rounded px-1.5 py-0.5 text-[8.5px] font-extrabold tracking-wide uppercase shrink-0">
                       Exceeds space
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/80">
-                  <span className="text-xs font-mono text-slate-400 font-semibold" title="Original Dimensions">
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
+                  <span className="text-xs font-mono text-slate-500 font-semibold" title="Original Dimensions">
                     {panel.width} x {panel.height} mm
                   </span>
                   <span className="text-[9px] text-slate-500 font-mono">

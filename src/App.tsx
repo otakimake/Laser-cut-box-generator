@@ -322,6 +322,7 @@ export default function App() {
   const [traceThreshold, setTraceThreshold] = useState<number>(128);
   const [traceInvert, setTraceInvert] = useState<boolean>(false);
   const [traceSmoothing, setTraceSmoothing] = useState<number>(2); // 0 to 5
+  const [traceCenterline, setTraceCenterline] = useState<boolean>(false);
 
   // Auto stencil bridge controls
   const [enableBridges, setEnableBridges] = useState<boolean>(false);
@@ -420,13 +421,14 @@ export default function App() {
         bridgeType,
         bridgeType === 'global' ? globalBridgeDir : undefined,
         bridgeType === 'per_island' ? islandBridgeMode : undefined,
-        bridgeJitter
+        bridgeJitter,
+        traceCenterline
       );
       setEngravePaths(paths);
     } catch (err) {
       console.error('Error tracing image:', err);
     }
-  }, [uploadedImgData, traceThreshold, traceInvert, traceSmoothing, enableBridges, bridgeWidth, bridgeType, globalBridgeDir, islandBridgeMode, bridgeJitter]);
+  }, [uploadedImgData, traceThreshold, traceInvert, traceSmoothing, enableBridges, bridgeWidth, bridgeType, globalBridgeDir, islandBridgeMode, bridgeJitter, traceCenterline]);
 
   useEffect(() => {
     // Generate panels on parameter changes
@@ -593,36 +595,34 @@ export default function App() {
   const currentWoodColor = WOOD_TYPES.find((w) => w.value === selectedWood)?.color || '#e0b98a';
 
   return (
-    <div id="app-root" className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans overflow-hidden select-none">
+    <div id="app-root" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans overflow-hidden select-none">
       
       {/* Top Professional Header Bar */}
-      <header className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 shrink-0 gap-4">
+      <header className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between px-6 py-3 bg-white border-b border-slate-200 shrink-0 gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-9 h-9 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20 text-lg border border-blue-400">
-            B
+          <div className="w-9 h-9 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-md text-lg border border-blue-400 select-none">
+            K
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-extrabold tracking-tight text-white flex items-center gap-1.5">
-                BOXSMITH <span className="text-blue-400 font-mono text-xs font-semibold bg-blue-900/40 px-2 py-0.5 rounded border border-blue-800/60">v2.4.1</span>
-              </h1>
-            </div>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-              Precision CAD Laser Enclosure Designer
+            <p className="text-[9px] text-blue-600 font-extrabold uppercase tracking-[0.18em] leading-none mb-1">
+              KĀPITI LIBRARIES
             </p>
+            <h1 className="text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5 leading-none">
+              BOXSMITH <span className="text-blue-600 font-mono text-[10px] font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">v2.5.0</span>
+            </h1>
           </div>
         </div>
 
         {/* CAD Preset Quick Picker */}
-        <div className="flex items-center gap-2 flex-wrap bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-          <span className="text-[10px] font-extrabold text-slate-400 px-2 uppercase tracking-widest flex items-center gap-1">
-            <Sparkle className="w-3.5 h-3.5 text-blue-400" /> Presets:
+        <div className="flex items-center gap-2 flex-wrap bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+          <span className="text-[10px] font-extrabold text-slate-500 px-2 uppercase tracking-widest flex items-center gap-1">
+            <Sparkle className="w-3.5 h-3.5 text-blue-600" /> Presets:
           </span>
           {PRESETS.map((preset) => (
             <button
               key={preset.name}
               onClick={() => loadPreset(preset)}
-              className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg px-3 py-1.5 transition-all cursor-pointer border border-slate-800 hover:border-slate-700 active:scale-95"
+              className="text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 rounded-lg px-3 py-1.5 transition-all cursor-pointer border border-slate-200 hover:border-slate-300 active:scale-95 shadow-sm"
             >
               {preset.name}
             </button>
@@ -639,14 +639,14 @@ export default function App() {
                 depth: 120,
                 thickness: 3.0,
                 fingerWidth: 12.0,
-                laserKerf: 0.10,
+                laserKerf: 0.20,
                 boxType: 'closed',
                 lidType: 'sliding'
               });
               setExplode(0);
               triggerFeedback("Project workspace reset to defaults", "info");
             }}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-705 border border-slate-700 hover:border-slate-600 rounded text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded text-xs font-bold text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
             title="Reset to defaults"
           >
             <RefreshCcw className="w-3.5 h-3.5" />
@@ -657,37 +657,37 @@ export default function App() {
 
       {/* Feedback Toast Notice */}
       {feedbackMsg && (
-        <div className="fixed top-16 right-6 z-50 bg-slate-900/95 backdrop-blur-md border border-slate-700 p-4 rounded-xl shadow-2xl max-w-sm flex items-center gap-3 animate-slide-in">
-          <span className="bg-blue-500/25 p-1 rounded-full text-blue-400 border border-blue-500/40">
+        <div className="fixed top-16 right-6 z-50 bg-white border border-slate-200 p-4 rounded-xl shadow-md max-w-sm flex items-center gap-3 animate-slide-in">
+          <span className="bg-blue-50 p-1 rounded-full text-blue-600 border border-blue-100">
             <Check className="w-4 h-4" />
           </span>
-          <p className="text-xs font-bold text-slate-200">{feedbackMsg.text}</p>
+          <p className="text-xs font-bold text-slate-800">{feedbackMsg.text}</p>
         </div>
       )}
 
       {/* Main Workspace Frame */}
-      <div className="flex flex-grow flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-800 overflow-hidden bg-slate-950">
+      <div className="flex flex-grow flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-200 overflow-hidden bg-slate-50">
         
         {/* Left Sidepanel: Precision Parameters Editor */}
-        <aside className="w-full lg:w-[320px] shrink-0 bg-slate-900/70 border-r border-slate-800 flex flex-col p-5 gap-6 overflow-y-auto max-h-[calc(100vh-80px)] select-none">
+        <aside className="w-full lg:w-[320px] shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col p-5 gap-6 overflow-y-auto max-h-[calc(100vh-80px)] select-none">
           
           {/* Header */}
           <div>
-            <label className="text-[11px] font-extrabold text-blue-400 uppercase tracking-widest block mb-2 border-b border-slate-800 pb-2">
+            <label className="text-[11px] font-extrabold text-blue-600 uppercase tracking-widest block mb-2 border-b border-slate-200 pb-2">
               Parameters Spec
             </label>
           </div>
 
           {/* Sizing Parameters Card Group */}
           <div className="flex flex-col gap-5">
-            <h3 className="text-xs font-extrabold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <Ruler className="w-3.5 h-3.5 text-blue-400" /> Box Dimensions (mm)
+            <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+              <Ruler className="w-3.5 h-3.5 text-blue-600" /> Box Dimensions (mm)
             </h3>
             
             {/* Width X */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-805 flex flex-col gap-1.5">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold text-slate-400">Outer Width (X)</span>
+                <span className="text-xs font-bold text-slate-650">Outer Width (X)</span>
                 <input
                   type="number"
                   min="20"
@@ -695,7 +695,7 @@ export default function App() {
                   value={localWidth}
                   onChange={(e) => handleWidthChange(e.target.value)}
                   onBlur={handleWidthBlur}
-                  className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-blue-400 text-right focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
                 />
               </div>
               <input
@@ -705,14 +705,14 @@ export default function App() {
                 step="1"
                 value={params.width}
                 onChange={(e) => updateParam('width', Number(e.target.value))}
-                className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer mt-1"
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer mt-1"
               />
             </div>
 
             {/* Height Y */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-805 flex flex-col gap-1.5">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold text-slate-400">Outer Height (Y)</span>
+                <span className="text-xs font-bold text-slate-650">Outer Height (Y)</span>
                 <input
                   type="number"
                   min="20"
@@ -720,7 +720,7 @@ export default function App() {
                   value={localHeight}
                   onChange={(e) => handleHeightChange(e.target.value)}
                   onBlur={handleHeightBlur}
-                  className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-blue-400 text-right focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
                 />
               </div>
               <input
@@ -730,14 +730,14 @@ export default function App() {
                 step="1"
                 value={params.height}
                 onChange={(e) => updateParam('height', Number(e.target.value))}
-                className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer mt-1"
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer mt-1"
               />
             </div>
 
             {/* Depth Z */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-805 flex flex-col gap-1.5">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold text-slate-400">Outer Depth (Z)</span>
+                <span className="text-xs font-bold text-slate-650">Outer Depth (Z)</span>
                 <input
                   type="number"
                   min="20"
@@ -745,7 +745,7 @@ export default function App() {
                   value={localDepth}
                   onChange={(e) => handleDepthChange(e.target.value)}
                   onBlur={handleDepthBlur}
-                  className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-blue-400 text-right focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
                 />
               </div>
               <input
@@ -755,20 +755,20 @@ export default function App() {
                 step="1"
                 value={params.depth}
                 onChange={(e) => updateParam('depth', Number(e.target.value))}
-                className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer mt-1"
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer mt-1"
               />
             </div>
           </div>
 
           {/* Joinery & Materials Spec */}
           <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-extrabold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <Scissors className="w-3.5 h-3.5 text-blue-400" /> Material Properties
+            <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+              <Scissors className="w-3.5 h-3.5 text-blue-600" /> Material Properties
             </h3>
 
             {/* Material Preset Picker */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-850 flex flex-col gap-2">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Select Material</span>
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-2 shadow-sm">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Select Material</span>
               <div className="flex flex-col gap-1.5">
                 {WOOD_TYPES.map((wood) => {
                   const isSelected = selectedWood === wood.value;
@@ -778,14 +778,14 @@ export default function App() {
                       onClick={() => handleMaterialChange(wood.value)}
                       className={`flex items-center justify-between p-2 rounded-lg border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-900/20 border-blue-500/80 text-white shadow-md shadow-blue-500/5'
-                          : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                          ? 'bg-blue-50 border-blue-500 text-slate-900 shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-650 hover:bg-slate-100 hover:text-slate-800'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span
                           className={`w-4 h-4 rounded-full shrink-0 border transition-transform ${
-                            isSelected ? 'border-white scale-110 shadow-sm' : 'border-slate-700'
+                            isSelected ? 'border-blue-600 scale-110 shadow-sm' : 'border-slate-300'
                           }`}
                           style={{ backgroundColor: wood.color }}
                         />
@@ -797,7 +797,7 @@ export default function App() {
                         </div>
                       </div>
                       {isSelected && (
-                        <span className="text-[9px] font-extrabold text-blue-400 bg-blue-950 px-1.5 py-0.5 rounded border border-blue-900/50 uppercase tracking-wider">
+                        <span className="text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 uppercase tracking-wider">
                           Active
                         </span>
                       )}
@@ -805,15 +805,15 @@ export default function App() {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-slate-400 leading-relaxed bg-slate-900/40 p-2 rounded border border-slate-900 mt-0.5">
+              <p className="text-[10px] text-slate-600 leading-relaxed bg-slate-50 p-2 rounded border border-slate-150 mt-0.5">
                 {WOOD_TYPES.find((w) => w.value === selectedWood)?.description}
               </p>
             </div>
 
             {/* Material Thick */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-805 flex flex-col gap-1.5">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold text-slate-400">Thickness (T)</span>
+                <span className="text-xs font-bold text-slate-650">Thickness (T)</span>
                 <input
                   type="number"
                   min="0.5"
@@ -822,7 +822,7 @@ export default function App() {
                   value={localThickness}
                   onChange={(e) => handleThicknessChange(e.target.value)}
                   onBlur={handleThicknessBlur}
-                  className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-blue-400 text-right focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
                 />
               </div>
               <input
@@ -832,7 +832,7 @@ export default function App() {
                 step="0.1"
                 value={params.thickness}
                 onChange={(e) => updateParam('thickness', Number(e.target.value))}
-                className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer mt-1"
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer mt-1"
               />
               <div className="flex gap-1.5 mt-2">
                 {[3.0, 4.0, 5.0, 6.0].map((th) => (
@@ -842,7 +842,7 @@ export default function App() {
                     className={`text-[10px] font-extrabold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                       params.thickness === th
                         ? 'bg-blue-600 text-white border-blue-500'
-                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
                     }`}
                   >
                     {th.toFixed(1)}mm
@@ -852,9 +852,9 @@ export default function App() {
             </div>
 
             {/* Tab Finger size */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-805 flex flex-col gap-1.5">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold text-slate-400">Finger Joint (W)</span>
+                <span className="text-xs font-bold text-slate-650">Finger Joint (W)</span>
                 <input
                   type="number"
                   min="2"
@@ -862,7 +862,7 @@ export default function App() {
                   value={localFingerWidth}
                   onChange={(e) => handleFingerWidthChange(e.target.value)}
                   onBlur={handleFingerWidthBlur}
-                  className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-blue-400 text-right focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
                 />
               </div>
               <input
@@ -872,16 +872,16 @@ export default function App() {
                 step="1"
                 value={params.fingerWidth}
                 onChange={(e) => updateParam('fingerWidth', Number(e.target.value))}
-                className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer mt-1"
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer mt-1"
               />
             </div>
 
             {/* Laser Kerf Offset */}
-            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-805 flex flex-col gap-1.5">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="flex items-center gap-1 text-xs font-semibold text-slate-400">
+                <span className="flex items-center gap-1 text-xs font-bold text-slate-650">
                   Laser Kerf Offset
-                  <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-help" title="Friction-fit laser beam compensation" />
+                  <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 cursor-help" title="Friction-fit laser beam compensation" />
                 </span>
                 <input
                   type="number"
@@ -891,7 +891,7 @@ export default function App() {
                   value={localLaserKerf}
                   onChange={(e) => handleLaserKerfChange(e.target.value)}
                   onBlur={handleLaserKerfBlur}
-                  className="w-20 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs font-mono text-blue-400 text-right focus:outline-none focus:border-blue-500 font-bold"
+                  className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
                 />
               </div>
               <input
@@ -901,7 +901,7 @@ export default function App() {
                 step="0.01"
                 value={params.laserKerf}
                 onChange={(e) => updateParam('laserKerf', Number(e.target.value))}
-                className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer mt-1"
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer mt-1"
               />
             </div>
           </div>
@@ -909,13 +909,13 @@ export default function App() {
           {/* Envelope Slot Options */}
           {params.boxType !== 'open-top' && (
             <div className="flex flex-col gap-4">
-              <h3 className="text-xs font-extrabold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Envelope & Money Slot
+              <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                <Sparkle className="w-3.5 h-3.5 text-blue-600" /> Envelope & Money Slot
               </h3>
 
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-805 flex flex-col gap-3">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300">Enable Envelope Slot</span>
+                  <span className="text-xs font-bold text-slate-750">Enable Envelope Slot</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -923,17 +923,17 @@ export default function App() {
                       onChange={(e) => updateParam('hasEnvelopeSlot', e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
                   </label>
                 </div>
 
                 {params.hasEnvelopeSlot && (
-                  <div className="flex flex-col gap-4 mt-2 pt-2 border-t border-slate-900">
+                  <div className="flex flex-col gap-4 mt-2 pt-2 border-t border-slate-100">
                     {/* Slot Width Slider */}
                     <div className="flex flex-col gap-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-semibold text-slate-400">Slot Width (mm)</span>
-                        <span className="text-xs font-mono font-bold text-blue-400">{params.envelopeSlotWidth || 150}mm</span>
+                        <span className="text-[11px] font-semibold text-slate-500">Slot Width (mm)</span>
+                        <span className="text-xs font-mono font-bold text-blue-600">{params.envelopeSlotWidth || 150}mm</span>
                       </div>
                       <input
                         type="range"
@@ -945,15 +945,15 @@ export default function App() {
                           const val = Number(e.target.value);
                           updateParam('envelopeSlotWidth', val);
                         }}
-                        className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                        className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                       />
                     </div>
 
                     {/* Slot Thickness Slider */}
                     <div className="flex flex-col gap-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-semibold text-slate-400">Slot Thickness (mm)</span>
-                        <span className="text-xs font-mono font-bold text-blue-400">{params.envelopeSlotThickness || 6}mm</span>
+                        <span className="text-[11px] font-semibold text-slate-500">Slot Thickness (mm)</span>
+                        <span className="text-xs font-mono font-bold text-blue-600">{params.envelopeSlotThickness || 6}mm</span>
                       </div>
                       <input
                         type="range"
@@ -965,7 +965,7 @@ export default function App() {
                           const val = Number(e.target.value);
                           updateParam('envelopeSlotThickness', val);
                         }}
-                        className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                        className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                       />
                     </div>
                     
@@ -980,7 +980,7 @@ export default function App() {
 
           {/* Laser Joint Style Selector */}
           <div className="flex flex-col gap-3">
-            <label className="text-[11px] font-extrabold text-blue-400 uppercase tracking-widest block border-b border-slate-800 pb-2">
+            <label className="text-[11px] font-extrabold text-blue-600 uppercase tracking-widest block border-b border-slate-200 pb-2">
               Joint Interface Configuration
             </label>
             <div className="grid grid-cols-1 gap-2">
@@ -1004,17 +1004,17 @@ export default function App() {
                 <button
                   key={style.id}
                   onClick={() => updateParam('boxType', style.id as BoxParams['boxType'])}
-                  className={`text-left p-3 rounded-lg border transition-all text-xs cursor-pointer flex flex-col gap-0.5 active:scale-98 ${
+                  className={`text-left p-3 rounded-lg border transition-all text-xs cursor-pointer flex flex-col gap-0.5 active:scale-98 shadow-sm ${
                     params.boxType === style.id
-                      ? 'bg-blue-600/10 border-blue-500 text-blue-200 shadow shadow-blue-500/15'
-                      : 'bg-slate-950 hover:bg-slate-900 border-slate-800 text-slate-300'
+                      ? 'bg-blue-50 border-blue-500 text-slate-900 shadow-sm'
+                      : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
                   }`}
                 >
-                  <span className="font-bold flex items-center justify-between text-[12px]">
+                  <span className="font-extrabold flex items-center justify-between text-[12px]">
                     {style.title}
-                    {params.boxType === style.id && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                    {params.boxType === style.id && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                   </span>
-                  <span className="text-slate-400 text-[10px] leading-relaxed">{style.desc}</span>
+                  <span className="text-slate-500 text-[10px] leading-relaxed mt-0.5">{style.desc}</span>
                 </button>
               ))}
             </div>
@@ -1022,9 +1022,9 @@ export default function App() {
 
           {/* Sizable 4-Type Removable Lid Picker */}
           {params.boxType === 'removable-lid' && (
-            <div className="flex flex-col gap-3.5 bg-slate-950/70 p-4 rounded-xl border border-blue-500/30">
-              <label className="text-[10px] font-extrabold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500 shadow shadow-blue-500/50 animate-pulse" />
+            <div className="flex flex-col gap-3.5 bg-blue-50/50 p-4 rounded-xl border border-blue-200 shadow-sm">
+              <label className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                 Select Lid Fitting Type:
               </label>
               <div className="grid grid-cols-1 gap-2 text-xs">
@@ -1045,15 +1045,15 @@ export default function App() {
                     onClick={() => updateParam('lidType', lid.id as any)}
                     className={`text-left p-2.5 rounded-lg border text-xs transition-all cursor-pointer flex flex-col gap-1 ${
                       (params.lidType || 'sliding') === lid.id
-                        ? 'bg-blue-600/10 border-blue-500 text-blue-200 font-bold shadow'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-850'
+                        ? 'bg-white border-blue-500 text-slate-900 font-extrabold shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="font-bold flex items-center justify-between text-[11px] leading-none">
+                    <span className="font-extrabold flex items-center justify-between text-[11px] leading-none">
                       {lid.name}
-                      {(params.lidType || 'sliding') === lid.id && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                      {(params.lidType || 'sliding') === lid.id && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                     </span>
-                    <span className="text-slate-400 text-[10px] leading-tight font-normal">{lid.desc}</span>
+                    <span className="text-slate-500 text-[10px] leading-normal">{lid.desc}</span>
                   </button>
                 ))}
               </div>
@@ -1062,19 +1062,19 @@ export default function App() {
 
           {/* Laser Engraving Trace Add-On */}
           <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-extrabold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <Image className="w-3.5 h-3.5 text-blue-400" /> Laser Engraving (Add-On)
+            <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+              <Image className="w-3.5 h-3.5 text-blue-600" /> Laser Engraving (Add-On)
             </h3>
 
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-4">
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-200 flex flex-col gap-4 shadow-sm">
               {/* File Upload Trigger */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold text-slate-300">Upload Image to Trace</span>
+                <span className="text-xs font-bold text-slate-700">Upload Image to Trace</span>
                 {!uploadedImgData ? (
-                  <label className="flex flex-col items-center justify-center border border-dashed border-slate-850 hover:border-blue-500/50 bg-slate-900/40 rounded-xl p-5 cursor-pointer transition-all hover:bg-slate-900 group">
-                    <Image className="w-7 h-7 text-slate-500 group-hover:text-blue-400 transition-colors mb-2" />
-                    <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-300">Choose an image file</span>
-                    <span className="text-[10px] text-slate-600 mt-1">PNG, JPG, BMP, WEBP</span>
+                  <label className="flex flex-col items-center justify-center border border-dashed border-blue-250 hover:border-blue-500 bg-white rounded-xl p-5 cursor-pointer transition-all hover:bg-slate-50 group shadow-sm">
+                    <Image className="w-7 h-7 text-slate-400 group-hover:text-blue-600 transition-colors mb-2" />
+                    <span className="text-xs font-semibold text-slate-600 group-hover:text-slate-850">Choose an image file</span>
+                    <span className="text-[10px] text-slate-400 mt-1">PNG, JPG, BMP, WEBP</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1119,13 +1119,13 @@ export default function App() {
                     />
                   </label>
                 ) : (
-                  <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
                     <div className="flex items-center gap-2 overflow-hidden">
-                      <div className="w-8 h-8 bg-slate-950 rounded border border-slate-800 flex items-center justify-center shrink-0">
-                        <Image className="w-4 h-4 text-blue-400" />
+                      <div className="w-8 h-8 bg-slate-50 rounded border border-slate-200 flex items-center justify-center shrink-0">
+                        <Image className="w-4 h-4 text-blue-600" />
                       </div>
                       <div className="flex flex-col overflow-hidden">
-                        <span className="text-[11px] font-bold text-slate-300 truncate">{engraveImgName}</span>
+                        <span className="text-[11px] font-bold text-slate-750 truncate">{engraveImgName}</span>
                         <span className="text-[9px] text-slate-500 font-mono">{engraveImgDims.w}x{engraveImgDims.h}px ({engravePaths.length} loops)</span>
                       </div>
                     </div>
@@ -1136,7 +1136,7 @@ export default function App() {
                         setEngravePaths([]);
                         triggerFeedback('Removed engraved artwork', 'info');
                       }}
-                      className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded transition-all cursor-pointer"
+                      className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-red-500 rounded transition-all cursor-pointer"
                       title="Remove artwork"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1147,16 +1147,16 @@ export default function App() {
 
               {/* Only show configuration sliders if image is active */}
               {uploadedImgData && (
-                <div className="flex flex-col gap-4 mt-1 pt-3 border-t border-slate-900">
+                <div className="flex flex-col gap-4 mt-1 pt-3 border-t border-blue-100">
                   {/* Target Panel Dropdown */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400">Engrave On Panel</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Engrave On Panel</span>
                     </div>
                     <select
                       value={engravePanelId}
                       onChange={(e) => setEngravePanelId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500 font-semibold cursor-pointer"
+                      className="w-full bg-white border border-slate-200 rounded px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 font-semibold cursor-pointer shadow-sm"
                     >
                       {panels
                         .filter((p) => ['top', 'bottom', 'front', 'back', 'left', 'right'].includes(p.id))
@@ -1171,8 +1171,8 @@ export default function App() {
                   {/* Artwork Scale Slider */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400">Artwork Size (Scale)</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{engraveScale}%</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Artwork Size (Scale)</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">{engraveScale}%</span>
                     </div>
                     <input
                       type="range"
@@ -1181,15 +1181,15 @@ export default function App() {
                       step="1"
                       value={engraveScale}
                       onChange={(e) => setEngraveScale(Number(e.target.value))}
-                      className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
                   {/* Artwork Rotation Slider and Input */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400">Artwork Rotation</span>
-                      <div className="flex items-center gap-1 bg-slate-900 px-1 py-0.5 rounded border border-slate-800">
+                      <span className="text-[11px] font-semibold text-slate-500">Artwork Rotation</span>
+                      <div className="flex items-center gap-1 bg-white px-1 py-0.5 rounded border border-slate-200 shadow-sm">
                         <input
                           type="number"
                           min="-360"
@@ -1200,9 +1200,9 @@ export default function App() {
                             const val = Number(e.target.value);
                             setEngraveRotation(isNaN(val) ? 0 : val);
                           }}
-                          className="w-12 bg-transparent text-center text-xs font-mono font-bold text-blue-400 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-12 bg-transparent text-center text-xs font-mono font-bold text-blue-600 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <span className="text-[10px] font-bold text-slate-500 pr-1">°</span>
+                        <span className="text-[10px] font-bold text-slate-400 pr-1">°</span>
                       </div>
                     </div>
                     <input
@@ -1212,15 +1212,15 @@ export default function App() {
                       step="1"
                       value={((engraveRotation % 360) + 360) % 360}
                       onChange={(e) => setEngraveRotation(Number(e.target.value))}
-                      className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
                   {/* Offset X Slider */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400">Position Offset X (mm)</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{engraveOffsetX > 0 ? `+${engraveOffsetX}` : engraveOffsetX}mm</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Position Offset X (mm)</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">{engraveOffsetX > 0 ? `+${engraveOffsetX}` : engraveOffsetX}mm</span>
                     </div>
                     <input
                       type="range"
@@ -1229,15 +1229,15 @@ export default function App() {
                       step="1"
                       value={engraveOffsetX}
                       onChange={(e) => setEngraveOffsetX(Number(e.target.value))}
-                      className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
                   {/* Offset Y Slider */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400">Position Offset Y (mm)</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{engraveOffsetY > 0 ? `+${engraveOffsetY}` : engraveOffsetY}mm</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Position Offset Y (mm)</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">{engraveOffsetY > 0 ? `+${engraveOffsetY}` : engraveOffsetY}mm</span>
                     </div>
                     <input
                       type="range"
@@ -1246,18 +1246,18 @@ export default function App() {
                       step="1"
                       value={engraveOffsetY}
                       onChange={(e) => setEngraveOffsetY(Number(e.target.value))}
-                      className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
                   {/* Vectorization Threshold Slider */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
                         Trace Threshold
-                        <span className="text-[9px] text-slate-600 bg-slate-900 px-1 py-0.5 rounded">Light/Dark</span>
+                        <span className="text-[9px] text-slate-500 bg-white border border-slate-200 px-1 py-0.5 rounded">Light/Dark</span>
                       </span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{traceThreshold}</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">{traceThreshold}</span>
                     </div>
                     <input
                       type="range"
@@ -1266,15 +1266,15 @@ export default function App() {
                       step="1"
                       value={traceThreshold}
                       onChange={(e) => setTraceThreshold(Number(e.target.value))}
-                      className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
                   {/* Curve Smoothing (Chaikin / Low-Pass) */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-400">Curve Smoothing (Curves)</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">Level {traceSmoothing}</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Curve Smoothing (Curves)</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">Level {traceSmoothing}</span>
                     </div>
                     <input
                       type="range"
@@ -1283,13 +1283,13 @@ export default function App() {
                       step="1"
                       value={traceSmoothing}
                       onChange={(e) => setTraceSmoothing(Number(e.target.value))}
-                      className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
                   {/* Invert Brightness Toggle */}
-                  <div className="flex items-center justify-between py-1 bg-slate-900/40 px-2 rounded-lg border border-slate-900">
-                    <span className="text-[11px] font-semibold text-slate-400">Invert Image Trace</span>
+                  <div className="flex items-center justify-between py-1 bg-white px-2 rounded-lg border border-slate-200 shadow-sm">
+                    <span className="text-[11px] font-semibold text-slate-500">Invert Image Trace</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1297,14 +1297,31 @@ export default function App() {
                         onChange={(e) => setTraceInvert(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-8 h-4.5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white animate-transition"></div>
+                      <div className="w-8 h-4.5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white animate-transition"></div>
+                    </label>
+                  </div>
+
+                  {/* Centerline Tracing Toggle */}
+                  <div className="flex items-center justify-between py-1 bg-white px-2 rounded-lg border border-slate-200 shadow-sm">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-semibold text-slate-500">Trace Centerline</span>
+                      <span className="text-[9px] text-slate-450 leading-tight">Extract single-pixel center skeleton</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={traceCenterline}
+                        onChange={(e) => setTraceCenterline(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-8 h-4.5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white animate-transition"></div>
                     </label>
                   </div>
 
                   {/* Auto Stencil Bridges Section */}
-                  <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800/80 flex flex-col gap-2.5">
+                  <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col gap-2.5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-blue-400">Enable Stencil Bridges</span>
+                      <span className="text-[11px] font-bold text-blue-700">Enable Stencil Bridges</span>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
                           type="checkbox"
@@ -1312,17 +1329,17 @@ export default function App() {
                           onChange={(e) => setEnableBridges(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-8 h-4.5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
+                        <div className="w-8 h-4.5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
                       </label>
                     </div>
 
                     {enableBridges && (
-                      <div className="flex flex-col gap-3.5 mt-1 pt-2 border-t border-slate-800">
+                      <div className="flex flex-col gap-3.5 mt-1 pt-2 border-t border-slate-100">
                         {/* Bridge Width */}
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-semibold text-slate-400">Bridge Width (mm)</span>
-                            <span className="text-[11px] font-mono font-bold text-blue-400">{bridgeWidth.toFixed(1)}mm</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Bridge Width (mm)</span>
+                            <span className="text-[11px] font-mono font-bold text-blue-600">{bridgeWidth.toFixed(1)}mm</span>
                           </div>
                           <input
                             type="range"
@@ -1331,20 +1348,20 @@ export default function App() {
                             step="0.1"
                             value={bridgeWidth}
                             onChange={(e) => setBridgeWidth(Number(e.target.value))}
-                            className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                            className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                           />
                         </div>
 
                         {/* Bridge Placement Type */}
                         <div className="flex flex-col gap-1.5">
-                          <span className="text-[10px] font-semibold text-slate-400">Bridge Placement Algorithm</span>
+                          <span className="text-[10px] font-semibold text-slate-500">Bridge Placement Algorithm</span>
                           <div className="grid grid-cols-2 gap-1 text-[10px]">
                             <button
                               onClick={() => setBridgeType('per_island')}
                               className={`py-1 rounded border text-center font-bold transition-all cursor-pointer ${
                                 bridgeType === 'per_island'
-                                  ? 'bg-blue-600/10 border-blue-500 text-blue-300'
-                                  : 'bg-slate-950 border-slate-850 text-slate-400 hover:border-slate-800'
+                                  ? 'bg-blue-50 border-blue-500 text-blue-600'
+                                  : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm'
                               }`}
                             >
                               Island (Letters)
@@ -1353,8 +1370,8 @@ export default function App() {
                               onClick={() => setBridgeType('global')}
                               className={`py-1 rounded border text-center font-bold transition-all cursor-pointer ${
                                 bridgeType === 'global'
-                                  ? 'bg-blue-600/10 border-blue-500 text-blue-300'
-                                  : 'bg-slate-950 border-slate-850 text-slate-400 hover:border-slate-800'
+                                  ? 'bg-blue-50 border-blue-500 text-blue-600'
+                                  : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm'
                               }`}
                             >
                               Global grid
@@ -1365,11 +1382,11 @@ export default function App() {
                         {/* Mode parameters based on Type selection */}
                         {bridgeType === 'per_island' ? (
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-semibold text-slate-400">Island Anchors</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Island Anchors</span>
                             <select
                               value={islandBridgeMode}
                               onChange={(e) => setIslandBridgeMode(e.target.value as any)}
-                              className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-blue-500 font-medium cursor-pointer"
+                              className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:border-blue-500 font-semibold cursor-pointer shadow-sm"
                             >
                               <option value="island_all_four">All Four Extreme Points</option>
                               <option value="island_top_bottom">Top & Bottom Only</option>
@@ -1382,11 +1399,11 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-semibold text-slate-400">Global Grid lines</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Global Grid lines</span>
                             <select
                               value={globalBridgeDir}
                               onChange={(e) => setGlobalBridgeDir(e.target.value as any)}
-                              className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-blue-500 font-medium cursor-pointer"
+                              className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:border-blue-500 font-semibold cursor-pointer shadow-sm"
                             >
                               <option value="cross">Cross Grid (+)</option>
                               <option value="vertical">Single Center Vertical (|)</option>
@@ -1400,8 +1417,8 @@ export default function App() {
                         {/* Bridge Placement Jitter */}
                         <div className="flex flex-col gap-1.5">
                           <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-semibold text-slate-400">Position Stagger (Jitter)</span>
-                            <span className="text-[11px] font-mono font-bold text-blue-400">{bridgeJitter}%</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Position Stagger (Jitter)</span>
+                            <span className="text-[11px] font-mono font-bold text-blue-600">{bridgeJitter}%</span>
                           </div>
                           <input
                             type="range"
@@ -1410,7 +1427,7 @@ export default function App() {
                             step="5"
                             value={bridgeJitter}
                             onChange={(e) => setBridgeJitter(Number(e.target.value))}
-                            className="w-full accent-blue-500 h-1 bg-slate-800 rounded cursor-pointer"
+                            className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                           />
                         </div>
                       </div>
@@ -1422,21 +1439,21 @@ export default function App() {
           </div>
 
           {/* Export Panel Drawer */}
-          <div className="mt-auto p-4 bg-slate-950/80 rounded-lg border border-slate-800 flex flex-col gap-3">
-            <span className="text-[10px] font-extrabold text-slate-500 tracking-widest uppercase">QUICK EXPORTS</span>
+          <div className="mt-auto p-4 bg-blue-50/50 rounded-xl border border-blue-200 flex flex-col gap-3 shadow-sm">
+            <span className="text-[10px] font-extrabold text-blue-700 tracking-widest uppercase">QUICK EXPORTS</span>
             <div className="grid grid-cols-2 gap-2">
               <button 
                 onClick={handleExportSVG}
-                className="py-2.5 bg-slate-900 hover:bg-slate-800 text-[10px] font-extrabold text-slate-300 uppercase tracking-wider rounded border border-slate-700 hover:border-slate-500 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                className="py-2.5 bg-white hover:bg-slate-50 text-[10px] font-extrabold text-slate-700 uppercase tracking-wider rounded-lg border border-slate-200 hover:border-blue-300 shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-blue-400" />
+                <Download className="w-3.5 h-3.5 text-blue-600" />
                 SVG
               </button>
               <button
                 onClick={handleExportDXF}
-                className="py-2.5 bg-slate-900 hover:bg-slate-800 text-[10px] font-extrabold text-slate-300 uppercase tracking-wider rounded border border-slate-700 hover:border-slate-500 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                className="py-2.5 bg-white hover:bg-slate-50 text-[10px] font-extrabold text-slate-700 uppercase tracking-wider rounded-lg border border-slate-200 hover:border-blue-300 shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
-                <Scissors className="w-3.5 h-3.5 text-blue-400" />
+                <Scissors className="w-3.5 h-3.5 text-blue-600" />
                 DXF
               </button>
             </div>

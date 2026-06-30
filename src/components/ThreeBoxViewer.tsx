@@ -579,23 +579,22 @@ export default function ThreeBoxViewer({
   if (webglError) {
     return (
       <div 
-        className="w-full h-full min-h-[450px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col items-center justify-center p-8 text-center" 
-        style={{ backgroundImage: 'radial-gradient(#1e293b 1.5px, transparent 1.5px)', backgroundSize: '20px 20px' }}
+        className="w-full h-full min-h-[450px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col items-center justify-center p-8 text-center" 
         ref={containerRef}
       >
-        <div className="max-w-md bg-slate-900/95 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-amber-400">
+        <div className="max-w-md bg-white border border-slate-200 p-6 rounded-2xl shadow-md flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-amber-500">
             <Rotate3d className="w-6 h-6 animate-pulse" />
           </div>
-          <h3 className="text-base font-extrabold text-slate-200 tracking-tight">3D Preview Suspended</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-base font-extrabold text-slate-900 tracking-tight">3D Preview Suspended</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
             WebGL context creation was blocked or lost. This occurs when viewing the app within sandboxed iframes or lower-performance environments.
           </p>
-          <div className="w-full bg-slate-950/80 border border-slate-850 p-3.5 rounded-xl text-left flex flex-col gap-1.5">
+          <div className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-left flex flex-col gap-1.5">
             <span className="text-[10px] font-extrabold text-slate-500 tracking-wider uppercase">Alternative Solutions</span>
-            <ul className="text-[11px] text-slate-400 list-disc list-inside flex flex-col gap-1">
-              <li>Switch to the <strong className="text-slate-300">2D Flat Sheet Layout</strong> tab to see flat nesting.</li>
-              <li>Open the app in a <strong className="text-slate-300">New Tab</strong> to bypass sandbox frame blocks.</li>
+            <ul className="text-[11px] text-slate-600 list-disc list-inside flex flex-col gap-1">
+              <li>Switch to the <strong className="text-slate-800">2D Flat Sheet Layout</strong> tab to see flat nesting.</li>
+              <li>Open the app in a <strong className="text-slate-800">New Tab</strong> to bypass sandbox frame blocks.</li>
               <li>Toggle parameters on the left to dynamically adjust dimensions.</li>
             </ul>
           </div>
@@ -605,7 +604,7 @@ export default function ThreeBoxViewer({
               // Simple reload or trigger state refresh
               setTimeout(() => rebuild3DBox(), 100);
             }}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-2 px-4 rounded-xl text-xs transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2 px-4 rounded-xl text-xs transition-all active:scale-[0.98] shadow-sm cursor-pointer"
           >
             Attempt to Re-initialize WebGL
           </button>
@@ -616,38 +615,37 @@ export default function ThreeBoxViewer({
 
   return (
     <div 
-      className="relative w-full h-full bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col" 
-      style={{ backgroundImage: 'radial-gradient(#1e293b 1.5px, transparent 1.5px)', backgroundSize: '20px 20px' }}
+      className="relative w-full h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col" 
       ref={containerRef}
     >
       <canvas className="w-full h-full flex-grow cursor-grab active:cursor-grabbing outline-none" id="canvas-3d-box" ref={canvasRef} />
 
       {/* Floating help / controls layer */}
-      <div className="absolute top-4 left-4 pointer-events-none bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2 shadow-lg">
-        <Rotate3d className="w-4 h-4 text-blue-400 animate-pulse" />
-        <span className="text-xs font-semibold text-slate-300 select-none">
+      <div className="absolute top-4 left-4 pointer-events-none bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm">
+        <Rotate3d className="w-4 h-4 text-blue-600 animate-pulse" />
+        <span className="text-xs font-semibold text-slate-700 select-none">
           Left Click + Drag to Orbit │ Scroll to Zoom
         </span>
       </div>
 
-      <div className="absolute bottom-4 right-4 flex gap-1 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-800 shadow-2xl">
+      <div className="absolute bottom-4 right-4 flex gap-1 bg-white/95 backdrop-blur-sm p-1.5 rounded-xl border border-slate-200 shadow-sm">
         <button
           onClick={() => handleZoom('in')}
-          className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={() => handleZoom('out')}
-          className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleResetCamera}
-          className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           title="Reset Camera View"
         >
           <Maximize2 className="w-4 h-4" />
@@ -655,13 +653,13 @@ export default function ThreeBoxViewer({
       </div>
 
       {showLabels && (
-        <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur-md px-3 py-2.5 rounded-xl border border-slate-800 shadow-lg flex flex-col gap-1.5 select-none">
-          <span className="text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">Active Mesh Parts</span>
+        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1.5 select-none">
+          <span className="text-[10px] font-extrabold text-slate-500 tracking-wider uppercase">Active Mesh Parts</span>
           <div className="flex flex-col gap-1">
             {panels.map((p) => (
               <div key={p.id} className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 border border-blue-400/30" />
-                <span className="text-xs font-semibold text-slate-300 capitalize">{p.name || p.id}</span>
+                <span className="w-2 h-2 rounded-full bg-blue-600 border border-blue-400/30" />
+                <span className="text-xs font-semibold text-slate-700 capitalize">{p.name || p.id}</span>
               </div>
             ))}
           </div>
