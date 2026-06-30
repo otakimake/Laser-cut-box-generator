@@ -262,8 +262,15 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
   if (boxType === 'removable-lid') {
     if (lidType === 'sliding') {
       const slotW = D - 2 * t;
-      const y_bottom_center = H - 12 - t - 0.2;
-      const y_top_center = H - 12 + t + 0.2;
+      const slotW_top = D - t;
+      
+      // Flush sliding lid groove:
+      // The top of the top guide strip is exactly flush with the top of the side walls (H).
+      // So the top guide strip lies from H - t to H, centered at H - t/2.
+      const y_top_center = H - t / 2;
+      
+      // Bottom guide strip centered at H - 2.5 * t - 0.4 so there is exactly t + 0.4mm gap between strips.
+      const y_bottom_center = H - 2.5 * t - 0.4;
 
       // Bottom strip slots on Left
       leftHoles.push(createRectHole(
@@ -281,15 +288,15 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
       // Top strip slots on Left
       leftHoles.push(createRectHole(
-        t + slotW * 0.2 + kerf/2,
+        t + slotW_top * 0.2 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        t + slotW * 0.4 - kerf/2,
+        t + slotW_top * 0.4 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
       leftHoles.push(createRectHole(
-        t + slotW * 0.6 + kerf/2,
+        t + slotW_top * 0.6 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        t + slotW * 0.8 - kerf/2,
+        t + slotW_top * 0.8 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
 
@@ -309,17 +316,34 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
       // Top strip slots on Right
       rightHoles.push(createRectHole(
-        t + slotW * 0.2 + kerf/2,
+        t + slotW_top * 0.2 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        t + slotW * 0.4 - kerf/2,
+        t + slotW_top * 0.4 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
       rightHoles.push(createRectHole(
-        t + slotW * 0.6 + kerf/2,
+        t + slotW_top * 0.6 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        t + slotW * 0.8 - kerf/2,
+        t + slotW_top * 0.8 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
+
+      // Add top strip slots on Back panel for Back top guide strip
+      const slotW_back_short = Math.max(20, W - 2 * t - 30);
+      if (slotW_back_short > 20) {
+        backHoles.push(createRectHole(
+          t + 15 + slotW_back_short * 0.2 + kerf/2,
+          y_top_center - t/2 + kerf/2,
+          t + 15 + slotW_back_short * 0.4 - kerf/2,
+          y_top_center + t/2 - kerf/2
+        ));
+        backHoles.push(createRectHole(
+          t + 15 + slotW_back_short * 0.6 + kerf/2,
+          y_top_center - t/2 + kerf/2,
+          t + 15 + slotW_back_short * 0.8 - kerf/2,
+          y_top_center + t/2 - kerf/2
+        ));
+      }
     } else if (lidType === 'hinged') {
       // Left & Right panels have circular socket pivot holes (near top-back corner)
       // Left panel pivot is near back (x = t + 10)
@@ -361,9 +385,23 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       } else if (lidType === 'sliding') {
         pWidth = W - 2 * t - 0.7; // fits inside track of Left/Right guide plates
         pHeight = D - t;
-        topPoints = generatePanelPoints(pWidth, pHeight, t, Nu, Nv, 'flat', 'flat', 'flat', 'flat', kerf);
-        // Ergonomic circular finger grab handle
-        topHoles.push(createCirclePoints(pWidth / 2, 14, 8));
+        
+        // Beautiful 15mm ergonomic front pull lip/tab instead of circle cutout
+        const lipWidth = Math.min(40, pWidth - 20);
+        const lipStart = (pWidth - lipWidth) / 2;
+        const lipEnd = lipStart + lipWidth;
+        const lipDepth = 15; // 15mm protrusion
+
+        topPoints = [];
+        topPoints.push({ x: -kerf/2, y: -kerf/2 });
+        topPoints.push({ x: lipStart, y: -kerf/2 });
+        topPoints.push({ x: lipStart + 3, y: -lipDepth - kerf/2 });
+        topPoints.push({ x: lipEnd - 3, y: -lipDepth - kerf/2 });
+        topPoints.push({ x: lipEnd, y: -kerf/2 });
+        topPoints.push({ x: pWidth + kerf/2, y: -kerf/2 });
+        topPoints.push({ x: pWidth + kerf/2, y: pHeight + kerf/2 });
+        topPoints.push({ x: -kerf/2, y: pHeight + kerf/2 });
+
         if (params.hasEnvelopeSlot) {
           const sWidth = Math.min(params.envelopeSlotWidth ?? 140, pWidth - 20);
           const sThickness = Math.min(params.envelopeSlotThickness ?? 6, pHeight - 40);
@@ -462,7 +500,9 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
   if (boxType === 'removable-lid') {
     if (lidType === 'sliding') {
       // Shorter flat top edge to allow lid to slide forward over the front
-      fHeight = H - 12 - t/2;
+      // The bottom guide strip top surface is at H - 2*t - 0.4.
+      // So front panel height should be exactly H - 2*t - 0.4 to be flush with the track.
+      fHeight = H - 2 * t - 0.4;
       topEdgeTypeFront = 'flat';
     } else if (lidType === 'hinged') {
       // Goes up to the full height H, but with a custom aesthetically pleasing recess/notch
@@ -664,14 +704,6 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     });
 
     panels.push({
-      id: 'left_top_guide',
-      name: 'Left Top Guide Strip',
-      width: slotW,
-      height: stripW,
-      points: stripPoints
-    });
-
-    panels.push({
       id: 'right_bottom_guide',
       name: 'Right Bottom Guide Strip',
       width: slotW,
@@ -679,12 +711,70 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       points: stripPoints
     });
 
+    // 8b. Unified U-shaped Top Railing Frame (All one piece!)
+    const W_frame = W - 2 * t;
+    const D_frame = D - t; // D - t to extend all the way to the front
+    const slotW_back_short = Math.max(20, W - 2 * t - 30);
+
+    const tb1_start = 15 + slotW_back_short * 0.2;
+    const tb1_end = 15 + slotW_back_short * 0.4;
+    const tb2_start = 15 + slotW_back_short * 0.6;
+    const tb2_end = 15 + slotW_back_short * 0.8;
+
+    const framePoints: Point2D[] = [
+      // 1. Left outer edge with outward-pointing tabs (going from front to back, x = 0, y = 0 to D_frame)
+      { x: 0, y: 0 },
+      { x: 0, y: D_frame * 0.2 - kerf/2 },
+      { x: -t - kerf/2, y: D_frame * 0.2 - kerf/2 },
+      { x: -t - kerf/2, y: D_frame * 0.4 + kerf/2 },
+      { x: 0, y: D_frame * 0.4 + kerf/2 },
+      { x: 0, y: D_frame * 0.6 - kerf/2 },
+      { x: -t - kerf/2, y: D_frame * 0.6 - kerf/2 },
+      { x: -t - kerf/2, y: D_frame * 0.8 + kerf/2 },
+      { x: 0, y: D_frame * 0.8 + kerf/2 },
+      { x: 0, y: D_frame },
+
+      // 2. Back outer edge with outward-pointing tabs (going from left to right, y = D_frame, x = 0 to W_frame)
+      { x: tb1_start - kerf/2, y: D_frame },
+      { x: tb1_start - kerf/2, y: D_frame + t + kerf/2 },
+      { x: tb1_end + kerf/2, y: D_frame + t + kerf/2 },
+      { x: tb1_end + kerf/2, y: D_frame },
+      { x: tb2_start - kerf/2, y: D_frame },
+      { x: tb2_start - kerf/2, y: D_frame + t + kerf/2 },
+      { x: tb2_end + kerf/2, y: D_frame + t + kerf/2 },
+      { x: tb2_end + kerf/2, y: D_frame },
+      { x: W_frame, y: D_frame },
+
+      // 3. Right outer edge with outward-pointing tabs (going from back to front, x = W_frame, y = D_frame down to 0)
+      { x: W_frame, y: D_frame * 0.8 + kerf/2 },
+      { x: W_frame + t + kerf/2, y: D_frame * 0.8 + kerf/2 },
+      { x: W_frame + t + kerf/2, y: D_frame * 0.6 - kerf/2 },
+      { x: W_frame, y: D_frame * 0.6 - kerf/2 },
+      { x: W_frame, y: D_frame * 0.4 + kerf/2 },
+      { x: W_frame + t + kerf/2, y: D_frame * 0.4 + kerf/2 },
+      { x: W_frame + t + kerf/2, y: D_frame * 0.2 - kerf/2 },
+      { x: W_frame, y: D_frame * 0.2 - kerf/2 },
+      { x: W_frame, y: 0 },
+
+      // 4. Front right end
+      { x: W_frame - stripW, y: 0 },
+
+      // 5. Inner right edge (going from front to back, x = W_frame - stripW, y = 0 to D_frame - stripW)
+      { x: W_frame - stripW, y: D_frame - stripW },
+
+      // 6. Inner back edge (going from right to left, y = D_frame - stripW, x = W_frame - stripW to stripW)
+      { x: stripW, y: D_frame - stripW },
+
+      // 7. Inner left edge (going from back to front, x = stripW, y = D_frame - stripW to 0)
+      { x: stripW, y: 0 }
+    ];
+
     panels.push({
-      id: 'right_top_guide',
-      name: 'Right Top Guide Strip',
-      width: slotW,
-      height: stripW,
-      points: stripPoints
+      id: 'top_rail_frame',
+      name: 'Unified Top Railing Frame (Flush Top Lip)',
+      width: W_frame,
+      height: D_frame,
+      points: framePoints
     });
   }
 

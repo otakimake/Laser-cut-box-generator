@@ -35,7 +35,9 @@ import {
   Image,
   Sliders,
   Trash2,
-  Link
+  Link,
+  Plus,
+  Copy
 } from 'lucide-react';
 
 // Design presets for quick loading
@@ -310,19 +312,26 @@ export default function App() {
   const [sheetHeight, setSheetHeight] = useState<number>(400);
 
   // Traced engraving state
-  const [uploadedImgData, setUploadedImgData] = useState<ImageData | null>(null);
-  const [engraveImgDims, setEngraveImgDims] = useState<{ w: number; h: number }>({ w: 100, h: 100 });
-  const [engraveImgName, setEngraveImgName] = useState<string | null>(null);
-  const [engravePanelId, setEngravePanelId] = useState<string>('top'); // Default to top/lid panel
-  const [engraveScale, setEngraveScale] = useState<number>(60); // percentage of panel size, default 60%
-  const [engraveOffsetX, setEngraveOffsetX] = useState<number>(0); // offset X in mm, default 0
-  const [engraveOffsetY, setEngraveOffsetY] = useState<number>(0); // offset Y in mm, default 0
-  const [engraveRotation, setEngraveRotation] = useState<number>(0); // rotation in degrees, default 0
-  const [engravePaths, setEngravePaths] = useState<Point2D[][]>([]); // raw traced paths from imageTracer
-  const [traceThreshold, setTraceThreshold] = useState<number>(128);
-  const [traceInvert, setTraceInvert] = useState<boolean>(false);
-  const [traceSmoothing, setTraceSmoothing] = useState<number>(2); // 0 to 5
-  const [traceCenterline, setTraceCenterline] = useState<boolean>(false);
+  interface EngravingConfig {
+    id: string;
+    name: string;
+    imgData: ImageData;
+    imgDims: { w: number; h: number };
+    panelId: string;
+    panelIds?: string[];
+    scale: number;
+    offsetX: number;
+    offsetY: number;
+    rotation: number;
+    traceThreshold: number;
+    traceInvert: boolean;
+    traceSmoothing: number;
+    traceCenterline: boolean;
+  }
+
+  const [engravings, setEngravings] = useState<EngravingConfig[]>([]);
+  const [activeEngravingId, setActiveEngravingId] = useState<string | null>(null);
+  const [engravedPathsMap, setEngravedPathsMap] = useState<Record<string, Point2D[][]>>({});
 
   // Auto stencil bridge controls
   const [enableBridges, setEnableBridges] = useState<boolean>(false);
@@ -404,63 +413,70 @@ export default function App() {
     );
   };
 
-  // Re-run image tracer dynamically when options change
+  // Trace images to paths when config or global bridge parameters change
   useEffect(() => {
-    if (!uploadedImgData) {
-      setEngravePaths([]);
-      return;
-    }
-    try {
-      const paths = traceImage(
-        uploadedImgData,
-        traceThreshold,
-        traceInvert,
-        traceSmoothing,
-        enableBridges,
-        bridgeWidth,
-        bridgeType,
-        bridgeType === 'global' ? globalBridgeDir : undefined,
-        bridgeType === 'per_island' ? islandBridgeMode : undefined,
-        bridgeJitter,
-        traceCenterline
-      );
-      setEngravePaths(paths);
-    } catch (err) {
-      console.error('Error tracing image:', err);
-    }
-  }, [uploadedImgData, traceThreshold, traceInvert, traceSmoothing, enableBridges, bridgeWidth, bridgeType, globalBridgeDir, islandBridgeMode, bridgeJitter, traceCenterline]);
+    const newPathsMap: Record<string, Point2D[][]> = {};
+    engravings.forEach((eng) => {
+      try {
+        const paths = traceImage(
+          eng.imgData,
+          eng.traceThreshold,
+          eng.traceInvert,
+          eng.traceSmoothing,
+          enableBridges,
+          bridgeWidth,
+          bridgeType,
+          bridgeType === 'global' ? globalBridgeDir : undefined,
+          bridgeType === 'per_island' ? islandBridgeMode : undefined,
+          bridgeJitter,
+          eng.traceCenterline
+        );
+        newPathsMap[eng.id] = paths;
+      } catch (err) {
+        console.error('Error tracing image:', eng.name, err);
+        newPathsMap[eng.id] = [];
+      }
+    });
+    setEngravedPathsMap(newPathsMap);
+  }, [engravings, enableBridges, bridgeWidth, bridgeType, globalBridgeDir, islandBridgeMode, bridgeJitter]);
 
   useEffect(() => {
     // Generate panels on parameter changes
     const generated = generateBoxPanels(params);
     
-    // If there is an active engraving, apply it to the specified panel
-    if (engravePaths.length > 0) {
-      const updated = generated.map((panel) => {
-        if (panel.id === engravePanelId) {
-          const scaledPaths = getScaledAndPositionedEngravePaths(
-            engravePaths,
-            engraveImgDims.w,
-            engraveImgDims.h,
-            panel.width,
-            panel.height,
-            engraveScale,
-            engraveOffsetX,
-            engraveOffsetY,
-            engraveRotation
-          );
-          return {
-            ...panel,
-            engravePaths: scaledPaths
-          };
-        }
-        return panel;
-      });
-      setPanels(updated);
-    } else {
-      setPanels(generated);
-    }
-  }, [params, engravePaths, engravePanelId, engraveScale, engraveOffsetX, engraveOffsetY, engraveRotation, engraveImgDims]);
+    // Apply all engravings to their respective panels
+    const updated = generated.map((panel) => {
+      const panelEngravings = engravings.filter((eng) => 
+        (eng.panelIds && eng.panelIds.includes(panel.id)) || eng.panelId === panel.id
+      );
+      if (panelEngravings.length > 0) {
+        let combinedPaths: Point2D[][] = [];
+        panelEngravings.forEach((eng) => {
+          const rawPaths = engravedPathsMap[eng.id];
+          if (rawPaths && rawPaths.length > 0) {
+            const scaled = getScaledAndPositionedEngravePaths(
+              rawPaths,
+              eng.imgDims.w,
+              eng.imgDims.h,
+              panel.width,
+              panel.height,
+              eng.scale,
+              eng.offsetX,
+              eng.offsetY,
+              eng.rotation
+            );
+            combinedPaths = combinedPaths.concat(scaled);
+          }
+        });
+        return {
+          ...panel,
+          engravePaths: combinedPaths
+        };
+      }
+      return panel;
+    });
+    setPanels(updated);
+  }, [params, engravings, engravedPathsMap]);
 
   const loadPreset = (preset: Preset) => {
     setParams({
@@ -577,6 +593,13 @@ export default function App() {
       ...prev,
       [key]: val
     }));
+  };
+
+  const updateActiveEngraving = (fields: Partial<EngravingConfig>) => {
+    if (!activeEngravingId) return;
+    setEngravings((prev) =>
+      prev.map((eng) => (eng.id === activeEngravingId ? { ...eng, ...fields } : eng))
+    );
   };
 
   const handleMaterialChange = (materialValue: string) => {
@@ -1067,120 +1090,235 @@ export default function App() {
             </h3>
 
             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-200 flex flex-col gap-4 shadow-sm">
-              {/* File Upload Trigger */}
+              {/* File Upload Trigger (Always available to add more images) */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold text-slate-700">Upload Image to Trace</span>
-                {!uploadedImgData ? (
-                  <label className="flex flex-col items-center justify-center border border-dashed border-blue-250 hover:border-blue-500 bg-white rounded-xl p-5 cursor-pointer transition-all hover:bg-slate-50 group shadow-sm">
-                    <Image className="w-7 h-7 text-slate-400 group-hover:text-blue-600 transition-colors mb-2" />
+                <span className="text-xs font-bold text-slate-700">Add New Image to Trace</span>
+                <label className="flex flex-col items-center justify-center border border-dashed border-blue-250 hover:border-blue-500 bg-white rounded-xl p-4 cursor-pointer transition-all hover:bg-slate-50 group shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-semibold text-slate-600 group-hover:text-slate-850">Choose an image file</span>
-                    <span className="text-[10px] text-slate-400 mt-1">PNG, JPG, BMP, WEBP</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setEngraveImgName(file.name);
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const img = document.createElement('img');
-                            img.src = event.target?.result as string;
-                            img.onload = () => {
-                              const canvas = document.createElement('canvas');
-                              const MAX_DIM = 400;
-                              let w = img.width;
-                              let h = img.height;
-                              if (w > MAX_DIM || h > MAX_DIM) {
-                                if (w > h) {
-                                  h = Math.round((h * MAX_DIM) / w);
-                                  w = MAX_DIM;
-                                } else {
-                                  w = Math.round((w * MAX_DIM) / h);
-                                  h = MAX_DIM;
-                                }
-                              }
-                              canvas.width = w;
-                              canvas.height = h;
-                              const ctx = canvas.getContext('2d');
-                              if (ctx) {
-                                ctx.drawImage(img, 0, 0, w, h);
-                                const imgData = ctx.getImageData(0, 0, w, h);
-                                setUploadedImgData(imgData);
-                                setEngraveImgDims({ w, h });
-                                triggerFeedback('Image successfully imported for vector engraving!', 'success');
-                              }
-                            };
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-                ) : (
-                  <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <div className="w-8 h-8 bg-slate-50 rounded border border-slate-200 flex items-center justify-center shrink-0">
-                        <Image className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="text-[11px] font-bold text-slate-750 truncate">{engraveImgName}</span>
-                        <span className="text-[9px] text-slate-500 font-mono">{engraveImgDims.w}x{engraveImgDims.h}px ({engravePaths.length} loops)</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setUploadedImgData(null);
-                        setEngraveImgName(null);
-                        setEngravePaths([]);
-                        triggerFeedback('Removed engraved artwork', 'info');
-                      }}
-                      className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-red-500 rounded transition-all cursor-pointer"
-                      title="Remove artwork"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
-                )}
+                  <span className="text-[9px] text-slate-400 mt-1">PNG, JPG, BMP, WEBP</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const img = document.createElement('img');
+                          img.src = event.target?.result as string;
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_DIM = 400;
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > MAX_DIM || h > MAX_DIM) {
+                              if (w > h) {
+                                h = Math.round((h * MAX_DIM) / w);
+                                w = MAX_DIM;
+                              } else {
+                                w = Math.round((w * MAX_DIM) / h);
+                                h = MAX_DIM;
+                              }
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                              ctx.drawImage(img, 0, 0, w, h);
+                              const imgData = ctx.getImageData(0, 0, w, h);
+                              const newEngraving: EngravingConfig = {
+                                id: Date.now().toString(),
+                                name: file.name,
+                                imgData,
+                                imgDims: { w, h },
+                                panelId: 'top', // Default to top panel
+                                panelIds: ['top'],
+                                scale: 60,
+                                offsetX: 0,
+                                offsetY: 0,
+                                rotation: 0,
+                                traceThreshold: 128,
+                                traceInvert: false,
+                                traceSmoothing: 2,
+                                traceCenterline: false
+                              };
+                              setEngravings((prev) => [...prev, newEngraving]);
+                              setActiveEngravingId(newEngraving.id);
+                              triggerFeedback('Image successfully added for vector engraving!', 'success');
+                            }
+                          };
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
-              {/* Only show configuration sliders if image is active */}
-              {uploadedImgData && (
-                <div className="flex flex-col gap-4 mt-1 pt-3 border-t border-blue-100">
-                  {/* Target Panel Dropdown */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-500">Engrave On Panel</span>
-                    </div>
-                    <select
-                      value={engravePanelId}
-                      onChange={(e) => setEngravePanelId(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 font-semibold cursor-pointer shadow-sm"
-                    >
-                      {panels
-                        .filter((p) => ['top', 'bottom', 'front', 'back', 'left', 'right'].includes(p.id))
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.width}x{p.height}mm)
-                          </option>
-                        ))}
-                    </select>
+              {/* List of engravings */}
+              {engravings.length > 0 && (
+                <div className="flex flex-col gap-2 border-b border-blue-100 pb-3">
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Engraved Images ({engravings.length})</span>
+                  <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto">
+                    {engravings.map((eng) => {
+                      const isActive = eng.id === activeEngravingId;
+                      return (
+                        <div
+                          key={eng.id}
+                          onClick={() => setActiveEngravingId(eng.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-blue-50 border-blue-500 text-slate-900 shadow-sm'
+                              : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-7 h-7 rounded border flex items-center justify-center shrink-0 ${isActive ? 'bg-blue-100 border-blue-300' : 'bg-slate-50 border-slate-200'}`}>
+                              <Image className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                            </div>                             <div className="flex flex-col min-w-0">
+                              <span className="text-[11px] font-bold truncate leading-tight">{eng.name}</span>
+                              <span className="text-[9px] text-slate-500 leading-none mt-0.5 uppercase font-mono">
+                                Panels: <span className="text-blue-600 font-bold">{(eng.panelIds && eng.panelIds.length > 0) ? eng.panelIds.join(', ') : eng.panelId}</span> • {eng.scale}%
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const dupId = Date.now().toString() + Math.round(Math.random() * 1000).toString();
+                                const duplicate: EngravingConfig = {
+                                  ...eng,
+                                  id: dupId,
+                                  name: `${eng.name} (Copy)`,
+                                  panelIds: [...(eng.panelIds || [eng.panelId])],
+                                };
+                                setEngravings((prev) => [...prev, duplicate]);
+                                setActiveEngravingId(dupId);
+                                triggerFeedback(`Duplicated ${eng.name} configuration`, 'success');
+                              }}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-450 hover:text-blue-600 transition-all cursor-pointer"
+                              title="Duplicate artwork config"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEngravings((prev) => prev.filter((item) => item.id !== eng.id));
+                                if (isActive) {
+                                  const remaining = engravings.filter((item) => item.id !== eng.id);
+                                  setActiveEngravingId(remaining.length > 0 ? remaining[0].id : null);
+                                }
+                                triggerFeedback('Removed engraved artwork', 'info');
+                              }}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-500 transition-all cursor-pointer"
+                              title="Delete artwork"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                </div>
+              )}
+
+              {/* Only show active engraving configurations if one is selected */}
+              {engravings.length > 0 && (
+                <div className="flex flex-col gap-4 mt-1 pt-3 border-t border-blue-100">
+                  {(() => {
+                    const activeEng = engravings.find((e) => e.id === activeEngravingId);
+                    if (!activeEng) {
+                      return (
+                        <p className="text-[10px] text-slate-500 text-center py-2">
+                          Select an image above to edit its parameters.
+                        </p>
+                      );
+                    }
+
+                    const rawPathsLength = (engravedPathsMap[activeEng.id] || []).length;
+
+                    return (
+                      <div className="flex flex-col gap-4">
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-0.5">
+                          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Editing Image Settings</span>
+                          <span className="text-xs font-bold text-slate-750 truncate">{activeEng.name}</span>
+                          <span className="text-[9px] text-slate-500 font-mono">
+                            {activeEng.imgDims.w}x{activeEng.imgDims.h}px ({rawPathsLength} loops)
+                          </span>
+                        </div>
+
+                    {/* Target Panels Checkbox Grid */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-semibold text-slate-500">Engrave On Panels</span>
+                        <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded tracking-wider uppercase">Multi-Select</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {panels
+                          .filter((p) => ['top', 'bottom', 'front', 'back', 'left', 'right'].includes(p.id))
+                          .map((p) => {
+                            const currentIds = activeEng.panelIds || (activeEng.panelId ? [activeEng.panelId] : []);
+                            const isChecked = currentIds.includes(p.id);
+                            return (
+                              <label
+                                key={p.id}
+                                className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                                  isChecked
+                                    ? 'bg-blue-50/70 border-blue-400 text-slate-900 font-semibold shadow-xs'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    let nextIds = [...currentIds];
+                                    if (e.target.checked) {
+                                      if (!nextIds.includes(p.id)) {
+                                        nextIds.push(p.id);
+                                      }
+                                    } else {
+                                      nextIds = nextIds.filter((id) => id !== p.id);
+                                    }
+                                    updateActiveEngraving({
+                                      panelIds: nextIds,
+                                      panelId: nextIds[0] || ''
+                                    });
+                                  }}
+                                  className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                                />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[11px] leading-tight capitalize truncate">{p.name}</span>
+                                  <span className="text-[9px] text-slate-400 font-mono leading-none mt-0.5">{p.width}x{p.height}mm</span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                      </div>
+                    </div>
 
                   {/* Artwork Scale Slider */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-semibold text-slate-500">Artwork Size (Scale)</span>
-                      <span className="text-xs font-mono font-bold text-blue-600">{engraveScale}%</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">{activeEng.scale}%</span>
                     </div>
                     <input
                       type="range"
                       min="10"
                       max="100"
                       step="1"
-                      value={engraveScale}
-                      onChange={(e) => setEngraveScale(Number(e.target.value))}
+                      value={activeEng.scale}
+                      onChange={(e) => updateActiveEngraving({ scale: Number(e.target.value) })}
                       className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
@@ -1195,10 +1333,10 @@ export default function App() {
                           min="-360"
                           max="360"
                           step="1"
-                          value={engraveRotation}
+                          value={activeEng.rotation}
                           onChange={(e) => {
                             const val = Number(e.target.value);
-                            setEngraveRotation(isNaN(val) ? 0 : val);
+                            updateActiveEngraving({ rotation: isNaN(val) ? 0 : val });
                           }}
                           className="w-12 bg-transparent text-center text-xs font-mono font-bold text-blue-600 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
@@ -1210,8 +1348,8 @@ export default function App() {
                       min="0"
                       max="360"
                       step="1"
-                      value={((engraveRotation % 360) + 360) % 360}
-                      onChange={(e) => setEngraveRotation(Number(e.target.value))}
+                      value={((activeEng.rotation % 360) + 360) % 360}
+                      onChange={(e) => updateActiveEngraving({ rotation: Number(e.target.value) })}
                       className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
@@ -1220,15 +1358,17 @@ export default function App() {
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-semibold text-slate-500">Position Offset X (mm)</span>
-                      <span className="text-xs font-mono font-bold text-blue-600">{engraveOffsetX > 0 ? `+${engraveOffsetX}` : engraveOffsetX}mm</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">
+                        {activeEng.offsetX > 0 ? `+${activeEng.offsetX}` : activeEng.offsetX}mm
+                      </span>
                     </div>
                     <input
                       type="range"
                       min="-150"
                       max="150"
                       step="1"
-                      value={engraveOffsetX}
-                      onChange={(e) => setEngraveOffsetX(Number(e.target.value))}
+                      value={activeEng.offsetX}
+                      onChange={(e) => updateActiveEngraving({ offsetX: Number(e.target.value) })}
                       className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
@@ -1237,15 +1377,17 @@ export default function App() {
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-semibold text-slate-500">Position Offset Y (mm)</span>
-                      <span className="text-xs font-mono font-bold text-blue-600">{engraveOffsetY > 0 ? `+${engraveOffsetY}` : engraveOffsetY}mm</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">
+                        {activeEng.offsetY > 0 ? `+${activeEng.offsetY}` : activeEng.offsetY}mm
+                      </span>
                     </div>
                     <input
                       type="range"
                       min="-150"
                       max="150"
                       step="1"
-                      value={engraveOffsetY}
-                      onChange={(e) => setEngraveOffsetY(Number(e.target.value))}
+                      value={activeEng.offsetY}
+                      onChange={(e) => updateActiveEngraving({ offsetY: Number(e.target.value) })}
                       className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
@@ -1257,32 +1399,32 @@ export default function App() {
                         Trace Threshold
                         <span className="text-[9px] text-slate-500 bg-white border border-slate-200 px-1 py-0.5 rounded">Light/Dark</span>
                       </span>
-                      <span className="text-xs font-mono font-bold text-blue-600">{traceThreshold}</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">{activeEng.traceThreshold}</span>
                     </div>
                     <input
                       type="range"
                       min="10"
                       max="245"
                       step="1"
-                      value={traceThreshold}
-                      onChange={(e) => setTraceThreshold(Number(e.target.value))}
+                      value={activeEng.traceThreshold}
+                      onChange={(e) => updateActiveEngraving({ traceThreshold: Number(e.target.value) })}
                       className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
 
-                  {/* Curve Smoothing (Chaikin / Low-Pass) */}
+                  {/* Curve Smoothing */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-slate-500">Curve Smoothing (Curves)</span>
-                      <span className="text-xs font-mono font-bold text-blue-600">Level {traceSmoothing}</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Curve Smoothing</span>
+                      <span className="text-xs font-mono font-bold text-blue-600">Level {activeEng.traceSmoothing}</span>
                     </div>
                     <input
                       type="range"
                       min="0"
                       max="5"
                       step="1"
-                      value={traceSmoothing}
-                      onChange={(e) => setTraceSmoothing(Number(e.target.value))}
+                      value={activeEng.traceSmoothing}
+                      onChange={(e) => updateActiveEngraving({ traceSmoothing: Number(e.target.value) })}
                       className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
                     />
                   </div>
@@ -1293,8 +1435,8 @@ export default function App() {
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={traceInvert}
-                        onChange={(e) => setTraceInvert(e.target.checked)}
+                        checked={activeEng.traceInvert}
+                        onChange={(e) => updateActiveEngraving({ traceInvert: e.target.checked })}
                         className="sr-only peer"
                       />
                       <div className="w-8 h-4.5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white animate-transition"></div>
@@ -1305,19 +1447,21 @@ export default function App() {
                   <div className="flex items-center justify-between py-1 bg-white px-2 rounded-lg border border-slate-200 shadow-sm">
                     <div className="flex flex-col">
                       <span className="text-[11px] font-semibold text-slate-500">Trace Centerline</span>
-                      <span className="text-[9px] text-slate-450 leading-tight">Extract single-pixel center skeleton</span>
+                      <span className="text-[9px] text-slate-400 leading-tight">Extract single-pixel center skeleton</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={traceCenterline}
-                        onChange={(e) => setTraceCenterline(e.target.checked)}
+                        checked={activeEng.traceCenterline}
+                        onChange={(e) => updateActiveEngraving({ traceCenterline: e.target.checked })}
                         className="sr-only peer"
                       />
                       <div className="w-8 h-4.5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white animate-transition"></div>
                     </label>
                   </div>
-
+                </div>
+              );
+            })()}
                   {/* Auto Stencil Bridges Section */}
                   <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col gap-2.5 shadow-sm">
                     <div className="flex items-center justify-between">

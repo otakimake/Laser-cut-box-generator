@@ -193,8 +193,8 @@ export default function ThreeBoxViewer({
         normal.set(0, -1, 0);
       } else if (panel.id === 'top') {
         if (isLidSliding) {
-          // Slide groove sits at y=H-12, lid depth is D-t. Center offset is t/2 so front is flush with front panel face
-          basePos.set(0, H / 2 - 12, t / 2);
+          // Slide groove sits flush with the top of the box. Lid is recessed under the top rail: top of lid is H/2 - t - 0.2, center is H/2 - 1.5*t - 0.2.
+          basePos.set(0, H / 2 - 1.5 * t - 0.2, t / 2);
           rotation.set(-Math.PI / 2, 0, 0);
           normal.set(0, 0, 1.25); // Slides out forward smoothly along Z-axis!
         } else if (isLidHinged) {
@@ -209,8 +209,8 @@ export default function ThreeBoxViewer({
         }
       } else if (panel.id === 'front') {
         if (isLidSliding) {
-          // lowered front panel height
-          const fHeight = H - 12 - t/2;
+          // lowered front panel height to be flush with the bottom guide strip top surface
+          const fHeight = H - 2 * t - 0.4;
           basePos.set(0, -H / 2 + fHeight / 2, D / 2 - t / 2);
         } else {
           basePos.set(0, 0, D / 2 - t / 2);
@@ -227,12 +227,7 @@ export default function ThreeBoxViewer({
         normal.set(-1, 0, 0);
       } else if (panel.id === 'left_bottom_guide') {
         // Horizontal bottom guide strip inside Left wall
-        basePos.set(-W / 2 + t + 7.5, H / 2 - 12 - t - 0.2, 0);
-        rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
-        normal.set(-1, 0, 0); // Explodes with the left wall outwards
-      } else if (panel.id === 'left_top_guide') {
-        // Horizontal top guide strip inside Left wall
-        basePos.set(-W / 2 + t + 7.5, H / 2 - 12 + t + 0.2, 0);
+        basePos.set(-W / 2 + t + 7.5, H / 2 - 2.5 * t - 0.4, 0);
         rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
         normal.set(-1, 0, 0); // Explodes with the left wall outwards
       } else if (panel.id === 'right') {
@@ -241,14 +236,14 @@ export default function ThreeBoxViewer({
         normal.set(1, 0, 0);
       } else if (panel.id === 'right_bottom_guide') {
         // Horizontal bottom guide strip inside Right wall
-        basePos.set(W / 2 - t - 7.5, H / 2 - 12 - t - 0.2, 0);
+        basePos.set(W / 2 - t - 7.5, H / 2 - 2.5 * t - 0.4, 0);
         rotation.set(-Math.PI / 2, 0, Math.PI / 2);
         normal.set(1, 0, 0); // Explodes with the right wall outwards
-      } else if (panel.id === 'right_top_guide') {
-        // Horizontal top guide strip inside Right wall
-        basePos.set(W / 2 - t - 7.5, H / 2 - 12 + t + 0.2, 0);
-        rotation.set(-Math.PI / 2, 0, Math.PI / 2);
-        normal.set(1, 0, 0); // Explodes with the right wall outwards
+      } else if (panel.id === 'top_rail_frame') {
+        // Unified U-shaped Top Railing Frame (Flush top lip)
+        basePos.set(0, H / 2 - t / 2, t / 2);
+        rotation.set(-Math.PI / 2, 0, 0);
+        normal.set(0, 1, 0); // Explodes straight upwards!
       } else if (panel.id === 'lid_handle') {
         // Interlocking arched handle key sits vertically on top of drop lid
         basePos.set(0, H / 2 + 12.5, 0);
