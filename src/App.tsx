@@ -1462,19 +1462,19 @@ export default function App() {
         </aside>
 
         {/* Right Pane: Interactive WebGL Stage View & Flat pack sheets */}
-        <section className="flex-grow flex flex-col min-w-0 bg-slate-950 p-6 gap-5 overflow-y-auto">
+        <section className="flex-grow flex flex-col min-w-0 bg-white p-6 gap-5 overflow-y-auto">
           
           {/* Main Visual Workspace Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-805 pb-3 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-250 pb-3 shrink-0">
             
             {/* Tab switch styling */}
-            <div className="flex gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 select-none">
+            <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 select-none">
               <button
                 onClick={() => setActiveTab('3d')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   activeTab === '3d'
                     ? 'bg-blue-600 text-white shadow shadow-blue-500/20 font-extrabold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
                 <Box className="w-4 h-4" />
@@ -1485,7 +1485,7 @@ export default function App() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   activeTab === '2d'
                     ? 'bg-blue-600 text-white shadow shadow-blue-500/20 font-extrabold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
                 <Layers className="w-4 h-4" />
@@ -1494,12 +1494,12 @@ export default function App() {
             </div>
 
             {/* Workspace details info bubble */}
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 py-1.5 px-3.5 rounded-lg text-xs font-mono text-slate-400">
-              <span className="text-slate-600 font-extrabold select-none">BOUNDS</span>
+            <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 py-1.5 px-3.5 rounded-lg text-xs font-mono text-slate-600">
+              <span className="text-slate-400 font-extrabold select-none">BOUNDS</span>
               <span>W:{params.width}</span>
-              <span className="text-slate-700">|</span>
+              <span className="text-slate-300">|</span>
               <span>H:{params.height}</span>
-              <span className="text-slate-700">|</span>
+              <span className="text-slate-300">|</span>
               <span>D:{params.depth} mm</span>
             </div>
           </div>
@@ -1523,15 +1523,15 @@ export default function App() {
                 </div>
 
                 {/* Assembly Animation Controls shelf */}
-                <div className="bg-slate-900 border border-slate-800/80 p-5 rounded-xl flex flex-col sm:flex-row gap-5 items-stretch sm:items-center justify-between shrink-0 shadow-lg select-none">
+                <div className="bg-white border border-slate-205 p-5 rounded-xl flex flex-col sm:flex-row gap-5 items-stretch sm:items-center justify-between shrink-0 shadow-sm select-none">
                   
                   {/* Explode range */}
                   <div className="flex-grow max-w-lg">
-                    <div className="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
-                      <span className="flex items-center gap-1.5 text-blue-400 font-bold uppercase tracking-wider text-[11px]">
+                    <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1.5">
+                      <span className="flex items-center gap-1.5 text-blue-600 font-bold uppercase tracking-wider text-[11px]">
                         <Sparkles className="w-3.5 h-3.5" /> Orbit Assembly joint inspect
                       </span>
-                      <span className="font-mono text-blue-300 font-bold">{explode}% exploded</span>
+                      <span className="font-mono text-blue-600 font-bold">{explode}% exploded</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Closed</span>
@@ -1542,18 +1542,18 @@ export default function App() {
                         step="1"
                         value={explode}
                         onChange={(e) => setExplode(Number(e.target.value))}
-                        className="flex-grow h-1.5 accent-blue-500 bg-slate-950 rounded cursor-pointer"
+                        className="flex-grow h-1.5 accent-blue-650 bg-slate-100 rounded cursor-pointer"
                       />
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Exploded</span>
                     </div>
                   </div>
 
                   {/* Rendering customization options */}
-                  <div className="flex flex-wrap gap-5 select-none shrink-0 border-t sm:border-t-0 sm:border-l border-slate-800 pt-4 sm:pt-0 sm:pl-5">
+                  <div className="flex flex-wrap gap-5 select-none shrink-0 border-t sm:border-t-0 sm:border-l border-slate-200 pt-4 sm:pt-0 sm:pl-5">
                     
                     {/* Material simulation */}
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">3D Material Sim</span>
+                      <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">3D Material Sim</span>
                       <div className="flex gap-1.5">
                         {WOOD_TYPES.map((wood) => (
                           <button
@@ -1562,7 +1562,7 @@ export default function App() {
                             className={`w-6 h-6 rounded border transition-all cursor-pointer relative ${
                               selectedWood === wood.value
                                 ? 'ring-2 ring-blue-500 border-white shadow-lg scale-110'
-                                : 'border-slate-800 opacity-60 hover:opacity-100'
+                                : 'border-slate-200 opacity-60 hover:opacity-100'
                             }`}
                             style={{ backgroundColor: wood.color }}
                             title={wood.name}
@@ -1577,12 +1577,12 @@ export default function App() {
 
                     {/* Show Labels toggle */}
                     <div className="flex flex-col justify-end">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 hover:text-slate-300">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-650 hover:text-slate-800">
                         <input
                           type="checkbox"
                           checked={showLabels}
                           onChange={(e) => setShowLabels(e.target.checked)}
-                          className="accent-blue-500 rounded border-slate-850 cursor-pointer"
+                          className="accent-blue-600 rounded border-slate-200 cursor-pointer"
                         />
                         Part Info
                       </label>
@@ -1590,12 +1590,12 @@ export default function App() {
 
                     {/* Wireframe CAD look */}
                     <div className="flex flex-col justify-end">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 hover:text-slate-300">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-650 hover:text-slate-800">
                         <input
                           type="checkbox"
                           checked={wireframe}
                           onChange={(e) => setWireframe(e.target.checked)}
-                          className="accent-blue-500 rounded border-slate-850 cursor-pointer"
+                          className="accent-blue-600 rounded border-slate-200 cursor-pointer"
                         />
                         X-Ray CAD
                       </label>
@@ -1623,21 +1623,21 @@ export default function App() {
                 </div>
 
                 {/* Flat nesting parameters panel */}
-                <div className="bg-slate-900 border border-slate-850 p-5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between shrink-0 shadow-lg select-none gap-4">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-400 max-w-xl">
-                    <Info className="w-4 h-4 text-blue-400 shrink-0" />
+                <div className="bg-white border border-slate-200 p-5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between shrink-0 shadow-sm select-none gap-4">
+                  <div className="flex items-center gap-2.5 text-xs text-slate-600 max-w-xl">
+                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>Nesting margins prevent cross-scoring during laser cuts. Standard space is 6-10 mm.</span>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-300">Sheet Padding:</span>
+                    <span className="text-xs font-bold text-slate-700">Sheet Padding:</span>
                     <input
                       type="number"
                       min="1"
                       max="40"
                       value={nestingSpacing}
                       onChange={(e) => setNestingSpacing(Math.max(1, Math.min(50, Number(e.target.value))))}
-                      className="w-16 bg-slate-950 border border-slate-800 text-blue-400 font-extrabold font-mono text-center rounded py-1 px-1.5 focus:border-blue-500 focus:outline-none"
+                      className="w-16 bg-white border border-slate-200 text-blue-600 font-extrabold font-mono text-center rounded py-1 px-1.5 focus:border-blue-500 focus:outline-none"
                     />
                     <span className="text-[10px] uppercase font-bold text-slate-500 font-sans tracking-wide">mm</span>
                   </div>
@@ -1647,24 +1647,24 @@ export default function App() {
           </div>
 
           {/* Artisan CAD Information Shelf */}
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-5 flex flex-col sm:flex-row gap-5 shadow-lg select-none">
-            <div className="w-10 h-10 shrink-0 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center border border-blue-900/30">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row gap-5 shadow-sm select-none">
+            <div className="w-10 h-10 shrink-0 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center border border-blue-200">
               <Info className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-extrabold text-slate-200 uppercase tracking-wide">Pro-Tips &amp; Guide for Flawless Laser Cuts</h4>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide">Pro-Tips &amp; Guide for Flawless Laser Cuts</h4>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                 When sending exported DXF/SVG scripts to laser cutters (like LightBurn, Glowforge, or Trotec):
               </p>
-              <ul className="text-xs text-slate-400 mt-2.5 list-disc list-inside space-y-2 leading-relaxed">
+              <ul className="text-xs text-slate-600 mt-2.5 list-disc list-inside space-y-2 leading-relaxed">
                 <li>
-                  <strong className="text-slate-300">Kerf Settings:</strong> Plywood usually burns away about 0.08mm to 0.15mm of wall thickness. Acrylic is cleaner at 0.05mm. Fine-tune parameters to get tight friction fits that snap together!
+                  <strong className="text-slate-800">Kerf Settings:</strong> Plywood usually burns away about 0.08mm to 0.15mm of wall thickness. Acrylic is cleaner at 0.05mm. Fine-tune parameters to get tight friction fits that snap together!
                 </li>
                 <li>
-                  <strong className="text-slate-300">Sanding &amp; Finishes:</strong> Lightly sand parts on both sides to clear scorch marks or soot before final assembly.
+                  <strong className="text-slate-800">Sanding &amp; Finishes:</strong> Lightly sand parts on both sides to clear scorch marks or soot before final assembly.
                 </li>
                 <li>
-                  <strong className="text-slate-300">Friction vs. Glue:</strong> With precise kerf, joints hold purely by friction. Add tiny dabs of wood glue inside joints for unbreakable structures.
+                  <strong className="text-slate-800">Friction vs. Glue:</strong> With precise kerf, joints hold purely by friction. Add tiny dabs of wood glue inside joints for unbreakable structures.
                 </li>
               </ul>
             </div>

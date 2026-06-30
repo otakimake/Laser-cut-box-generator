@@ -439,7 +439,7 @@ export default function ThreeBoxViewer({
       panelsGroupRef.current = panelsGroup;
 
       // GRID HELPER & FLOOR SHADOW PLANE (Added directly to pivot for unified Fusion rotation)
-      const gridHelper = new THREE.GridHelper(maxDim * 5, 24, '#6366f1', '#334155');
+      const gridHelper = new THREE.GridHelper(maxDim * 5, 24, '#3b82f6', '#cbd5e1');
       gridHelper.position.y = -params.height / 2;
       pivot.add(gridHelper);
 
