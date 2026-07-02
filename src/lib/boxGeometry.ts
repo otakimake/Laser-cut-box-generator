@@ -383,29 +383,34 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
           topHoles.push(createCirclePoints(W / 2, D / 2, Math.max(10, Math.min(W, D) * 0.12)));
         }
       } else if (lidType === 'sliding') {
+        const lipDepth = 15; // 15mm protrusion
         pWidth = W - 2 * t - 0.7; // fits inside track of Left/Right guide plates
-        pHeight = D - t;
+        pHeight = D - t + lipDepth;
         
         // Beautiful 15mm ergonomic front pull lip/tab instead of circle cutout
         const lipWidth = Math.min(40, pWidth - 20);
         const lipStart = (pWidth - lipWidth) / 2;
         const lipEnd = lipStart + lipWidth;
-        const lipDepth = 15; // 15mm protrusion
 
         topPoints = [];
-        topPoints.push({ x: -kerf/2, y: -kerf/2 });
-        topPoints.push({ x: lipStart, y: -kerf/2 });
-        topPoints.push({ x: lipStart + 3, y: -lipDepth - kerf/2 });
-        topPoints.push({ x: lipEnd - 3, y: -lipDepth - kerf/2 });
-        topPoints.push({ x: lipEnd, y: -kerf/2 });
-        topPoints.push({ x: pWidth + kerf/2, y: -kerf/2 });
+        topPoints.push({ x: -kerf/2, y: lipDepth - kerf/2 });
+        topPoints.push({ x: lipStart, y: lipDepth - kerf/2 });
+        topPoints.push({ x: lipStart + 3, y: -kerf/2 });
+        topPoints.push({ x: lipEnd - 3, y: -kerf/2 });
+        topPoints.push({ x: lipEnd, y: lipDepth - kerf/2 });
+        topPoints.push({ x: pWidth + kerf/2, y: lipDepth - kerf/2 });
         topPoints.push({ x: pWidth + kerf/2, y: pHeight + kerf/2 });
         topPoints.push({ x: -kerf/2, y: pHeight + kerf/2 });
 
         if (params.hasEnvelopeSlot) {
           const sWidth = Math.min(params.envelopeSlotWidth ?? 140, pWidth - 20);
           const sThickness = Math.min(params.envelopeSlotThickness ?? 6, pHeight - 40);
-          topHoles.push(createRectHole(pWidth / 2 - sWidth / 2, pHeight / 2 - sThickness / 2 + 5, pWidth / 2 + sWidth / 2, pHeight / 2 + sThickness / 2 + 5));
+          topHoles.push(createRectHole(
+            pWidth / 2 - sWidth / 2, 
+            lipDepth + (pHeight - lipDepth) / 2 - sThickness / 2, 
+            pWidth / 2 + sWidth / 2, 
+            lipDepth + (pHeight - lipDepth) / 2 + sThickness / 2
+          ));
         }
       } else if (lidType === 'hinged') {
         const W_lid = W - 2 * t - 1.0;

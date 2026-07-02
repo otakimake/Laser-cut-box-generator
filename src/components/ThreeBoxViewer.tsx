@@ -194,7 +194,7 @@ export default function ThreeBoxViewer({
       } else if (panel.id === 'top') {
         if (isLidSliding) {
           // Slide groove sits flush with the top of the box. Lid is recessed under the top rail: top of lid is H/2 - t - 0.2, center is H/2 - 1.5*t - 0.2.
-          basePos.set(0, H / 2 - 1.5 * t - 0.2, t / 2);
+          basePos.set(0, H / 2 - 1.5 * t - 0.2, t / 2 + 7.5);
           rotation.set(-Math.PI / 2, 0, 0);
           normal.set(0, 0, 1.25); // Slides out forward smoothly along Z-axis!
         } else if (isLidHinged) {
