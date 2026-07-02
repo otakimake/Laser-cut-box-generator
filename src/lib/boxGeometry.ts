@@ -316,15 +316,15 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
       // Top strip slots on Right
       rightHoles.push(createRectHole(
-        t + slotW_top * 0.2 + kerf/2,
+        slotW_top * 0.2 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        t + slotW_top * 0.4 - kerf/2,
+        slotW_top * 0.4 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
       rightHoles.push(createRectHole(
-        t + slotW_top * 0.6 + kerf/2,
+        slotW_top * 0.6 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        t + slotW_top * 0.8 - kerf/2,
+        slotW_top * 0.8 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
 
@@ -415,54 +415,59 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       } else if (lidType === 'hinged') {
         const W_lid = W - 2 * t - 1.0;
         const D_lid = D - 2 * t - 1.0; // Fits inside all 4 walls with 0.5mm clearance on all sides
+        const lipDepth = 17; // 17mm protrusion
         pWidth = W_lid;
-        pHeight = D_lid;
+        pHeight = D_lid + lipDepth;
 
         const y_pivot = D_lid - 9.5;
         const steps = 8;
 
         topPoints = [];
-        topPoints.push({ x: 0, y: 0 });
+        topPoints.push({ x: 0, y: lipDepth });
         
         // Beautiful 17mm ergonomic front pull lip/tab
         const lipWidth = Math.min(40, W_lid - 20);
         const lipStart = (W_lid - lipWidth) / 2;
         const lipEnd = lipStart + lipWidth;
-        const lipDepth = 17; // 17mm protrusion
 
-        topPoints.push({ x: lipStart, y: 0 });
-        topPoints.push({ x: lipStart + 3, y: -lipDepth });
-        topPoints.push({ x: lipEnd - 3, y: -lipDepth });
-        topPoints.push({ x: lipEnd, y: 0 });
+        topPoints.push({ x: lipStart, y: lipDepth });
+        topPoints.push({ x: lipStart + 3, y: 0 });
+        topPoints.push({ x: lipEnd - 3, y: 0 });
+        topPoints.push({ x: lipEnd, y: lipDepth });
 
-        topPoints.push({ x: W_lid, y: 0 });
-        topPoints.push({ x: W_lid, y: y_pivot - t });
+        topPoints.push({ x: W_lid, y: lipDepth });
+        topPoints.push({ x: W_lid, y: lipDepth + y_pivot - t });
         
         // Semicircular peg on the right: centered at (W_lid, y_pivot), radius t, protruding to the right
         for (let i = 0; i <= steps; i++) {
           const angle = -Math.PI / 2 + (i / steps) * Math.PI;
           topPoints.push({
             x: W_lid + Math.cos(angle) * t,
-            y: y_pivot + Math.sin(angle) * t
+            y: lipDepth + y_pivot + Math.sin(angle) * t
           });
         }
 
-        topPoints.push({ x: W_lid, y: D_lid });
-        topPoints.push({ x: 0, y: D_lid });
-        topPoints.push({ x: 0, y: y_pivot + t });
+        topPoints.push({ x: W_lid, y: lipDepth + D_lid });
+        topPoints.push({ x: 0, y: lipDepth + D_lid });
+        topPoints.push({ x: 0, y: lipDepth + y_pivot + t });
 
         // Semicircular peg on the left: centered at (0, y_pivot), radius t, protruding to the left
         for (let i = 0; i <= steps; i++) {
           const angle = Math.PI / 2 + (i / steps) * Math.PI;
           topPoints.push({
             x: Math.cos(angle) * t,
-            y: y_pivot + Math.sin(angle) * t
+            y: lipDepth + y_pivot + Math.sin(angle) * t
           });
         }
         if (params.hasEnvelopeSlot) {
           const sWidth = Math.min(params.envelopeSlotWidth ?? 140, pWidth - 20);
-          const sThickness = Math.min(params.envelopeSlotThickness ?? 6, pHeight - 20);
-          topHoles.push(createRectHole(pWidth / 2 - sWidth / 2, pHeight / 2 - sThickness / 2, pWidth / 2 + sWidth / 2, pHeight / 2 + sThickness / 2));
+          const sThickness = Math.min(params.envelopeSlotThickness ?? 6, D_lid - 20);
+          topHoles.push(createRectHole(
+            pWidth / 2 - sWidth / 2, 
+            lipDepth + D_lid / 2 - sThickness / 2, 
+            pWidth / 2 + sWidth / 2, 
+            lipDepth + D_lid / 2 + sThickness / 2
+          ));
         }
       } else if (lidType === 'drop-in') {
         topPoints = generatePanelPoints(W, D, t, Nu, Nv, 'flat', 'flat', 'flat', 'flat', kerf);
