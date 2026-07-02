@@ -132,7 +132,7 @@ export function generatePanelPoints(
 
   // Corner transition 2 (Right to Top):
   const offsetEdge1End = edge1 === 'flat' ? 0 : getOffset(edge1 === 'male', Nv - 1);
-  const offsetEdge2Start = edge2 === 'flat' ? 0 : getOffset(edge2 === 'male', 0);
+  const offsetEdge2Start = edge2 === 'flat' ? 0 : getOffset(edge2 === 'male', Nu - 1);
   if (offsetEdge1End > 0 && offsetEdge2Start > 0) {
     points.push({ x: A - offsetEdge1End, y: B - offsetEdge2Start });
   }
@@ -146,8 +146,9 @@ export function generatePanelPoints(
     for (let i = 0; i < Nu; i++) {
       const u1 = (1 - i / Nu) * A;
       const u2 = (1 - (i + 1) / Nu) * A;
-      const vOffset = getOffset(isMale, i);
-      const isTab = isMale ? (i % 2 === 0) : (i % 2 !== 0);
+      const absIndex = Nu - 1 - i;
+      const vOffset = getOffset(isMale, absIndex);
+      const isTab = isMale ? (absIndex % 2 === 0) : (absIndex % 2 !== 0);
       const u1_adj = isTab ? (u1 + kerf / 2) : (u1 - kerf / 2);
       const u2_adj = isTab ? (u2 - kerf / 2) : (u2 + kerf / 2);
       points.push({ x: u1_adj, y: B - vOffset });
@@ -156,8 +157,8 @@ export function generatePanelPoints(
   }
 
   // Corner transition 3 (Top to Left):
-  const offsetEdge2End = edge2 === 'flat' ? 0 : getOffset(edge2 === 'male', Nu - 1);
-  const offsetEdge3Start = edge3 === 'flat' ? 0 : getOffset(edge3 === 'male', 0);
+  const offsetEdge2End = edge2 === 'flat' ? 0 : getOffset(edge2 === 'male', 0);
+  const offsetEdge3Start = edge3 === 'flat' ? 0 : getOffset(edge3 === 'male', Nv - 1);
   if (offsetEdge2End > 0 && offsetEdge3Start > 0) {
     points.push({ x: offsetEdge3Start, y: B - offsetEdge2End });
   }
@@ -171,8 +172,9 @@ export function generatePanelPoints(
     for (let i = 0; i < Nv; i++) {
       const v1 = (1 - i / Nv) * B;
       const v2 = (1 - (i + 1) / Nv) * B;
-      const uOffset = getOffset(isMale, i);
-      const isTab = isMale ? (i % 2 === 0) : (i % 2 !== 0);
+      const absIndex = Nv - 1 - i;
+      const uOffset = getOffset(isMale, absIndex);
+      const isTab = isMale ? (absIndex % 2 === 0) : (absIndex % 2 !== 0);
       const v1_adj = isTab ? (v1 + kerf / 2) : (v1 - kerf / 2);
       const v2_adj = isTab ? (v2 - kerf / 2) : (v2 + kerf / 2);
       points.push({ x: uOffset, y: v1_adj });
@@ -181,7 +183,7 @@ export function generatePanelPoints(
   }
 
   // Corner transition 0 (Left to Bottom):
-  const offsetEdge3End = edge3 === 'flat' ? 0 : getOffset(edge3 === 'male', Nv - 1);
+  const offsetEdge3End = edge3 === 'flat' ? 0 : getOffset(edge3 === 'male', 0);
   const offsetEdge0Start = edge0 === 'flat' ? 0 : getOffset(edge0 === 'male', 0);
   if (offsetEdge3End > 0 && offsetEdge0Start > 0) {
     points.push({ x: offsetEdge3End, y: offsetEdge0Start });
@@ -416,56 +418,57 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
         const W_lid = W - 2 * t - 1.0;
         const D_lid = D - 2 * t - 1.0; // Fits inside all 4 walls with 0.5mm clearance on all sides
         const lipDepth = 17; // 17mm protrusion
-        pWidth = W_lid;
+        pWidth = W_lid + 2 * t; // Adjust width to include the pegs protruding on both sides
         pHeight = D_lid + lipDepth;
 
         const y_pivot = D_lid - 9.5;
         const steps = 8;
 
         topPoints = [];
-        topPoints.push({ x: 0, y: lipDepth });
+        // Shift all points in X by +t to keep them in positive range [0, pWidth]
+        topPoints.push({ x: t, y: lipDepth });
         
         // Beautiful 17mm ergonomic front pull lip/tab
         const lipWidth = Math.min(40, W_lid - 20);
         const lipStart = (W_lid - lipWidth) / 2;
         const lipEnd = lipStart + lipWidth;
 
-        topPoints.push({ x: lipStart, y: lipDepth });
-        topPoints.push({ x: lipStart + 3, y: 0 });
-        topPoints.push({ x: lipEnd - 3, y: 0 });
-        topPoints.push({ x: lipEnd, y: lipDepth });
+        topPoints.push({ x: t + lipStart, y: lipDepth });
+        topPoints.push({ x: t + lipStart + 3, y: 0 });
+        topPoints.push({ x: t + lipEnd - 3, y: 0 });
+        topPoints.push({ x: t + lipEnd, y: lipDepth });
 
-        topPoints.push({ x: W_lid, y: lipDepth });
-        topPoints.push({ x: W_lid, y: lipDepth + y_pivot - t });
+        topPoints.push({ x: t + W_lid, y: lipDepth });
+        topPoints.push({ x: t + W_lid, y: lipDepth + y_pivot - t });
         
-        // Semicircular peg on the right: centered at (W_lid, y_pivot), radius t, protruding to the right
+        // Semicircular peg on the right: centered at (t + W_lid, y_pivot), radius t, protruding to the right
         for (let i = 0; i <= steps; i++) {
           const angle = -Math.PI / 2 + (i / steps) * Math.PI;
           topPoints.push({
-            x: W_lid + Math.cos(angle) * t,
+            x: t + W_lid + Math.cos(angle) * t,
             y: lipDepth + y_pivot + Math.sin(angle) * t
           });
         }
 
-        topPoints.push({ x: W_lid, y: lipDepth + D_lid });
-        topPoints.push({ x: 0, y: lipDepth + D_lid });
-        topPoints.push({ x: 0, y: lipDepth + y_pivot + t });
+        topPoints.push({ x: t + W_lid, y: lipDepth + D_lid });
+        topPoints.push({ x: t, y: lipDepth + D_lid });
+        topPoints.push({ x: t, y: lipDepth + y_pivot + t });
 
-        // Semicircular peg on the left: centered at (0, y_pivot), radius t, protruding to the left
+        // Semicircular peg on the left: centered at (t, y_pivot), radius t, protruding to the left
         for (let i = 0; i <= steps; i++) {
           const angle = Math.PI / 2 + (i / steps) * Math.PI;
           topPoints.push({
-            x: Math.cos(angle) * t,
+            x: t + Math.cos(angle) * t,
             y: lipDepth + y_pivot + Math.sin(angle) * t
           });
         }
         if (params.hasEnvelopeSlot) {
-          const sWidth = Math.min(params.envelopeSlotWidth ?? 140, pWidth - 20);
+          const sWidth = Math.min(params.envelopeSlotWidth ?? 140, W_lid - 20);
           const sThickness = Math.min(params.envelopeSlotThickness ?? 6, D_lid - 20);
           topHoles.push(createRectHole(
-            pWidth / 2 - sWidth / 2, 
+            t + W_lid / 2 - sWidth / 2, 
             lipDepth + D_lid / 2 - sThickness / 2, 
-            pWidth / 2 + sWidth / 2, 
+            t + W_lid / 2 + sWidth / 2, 
             lipDepth + D_lid / 2 + sThickness / 2
           ));
         }
@@ -682,34 +685,36 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     const stripW = 15; // width of the guide strip (depth of the ledge)
 
     // Generate points for a horizontal guide strip with 2 outer tabs (which insert into the side panels)
-    // The outer edge is along y=0. The tabs extend into negative y (from 0 to -t).
+    // The outer edge is along y = t + kerf/2. The tabs extend into positive y (from t + kerf/2 down to 0).
     const generateGuideStripPoints = (L: number, W_strip: number, t: number, kerf: number): Point2D[] => {
+      const yShift = t + kerf / 2;
       return [
-        { x: 0, y: 0 },
+        { x: 0, y: yShift },
         // Tab 1: wider by kerf/2 on both sides, longer by kerf/2
+        { x: L * 0.2 - kerf/2, y: yShift },
         { x: L * 0.2 - kerf/2, y: 0 },
-        { x: L * 0.2 - kerf/2, y: -t - kerf/2 },
-        { x: L * 0.4 + kerf/2, y: -t - kerf/2 },
         { x: L * 0.4 + kerf/2, y: 0 },
+        { x: L * 0.4 + kerf/2, y: yShift },
         // Tab 2
+        { x: L * 0.6 - kerf/2, y: yShift },
         { x: L * 0.6 - kerf/2, y: 0 },
-        { x: L * 0.6 - kerf/2, y: -t - kerf/2 },
-        { x: L * 0.8 + kerf/2, y: -t - kerf/2 },
         { x: L * 0.8 + kerf/2, y: 0 },
+        { x: L * 0.8 + kerf/2, y: yShift },
         
-        { x: L, y: 0 },
-        { x: L, y: W_strip },
-        { x: 0, y: W_strip }
+        { x: L, y: yShift },
+        { x: L, y: W_strip + yShift },
+        { x: 0, y: W_strip + yShift }
       ];
     };
 
+    const stripHeight = stripW + t + kerf / 2;
     const stripPoints = generateGuideStripPoints(slotW, stripW, t, kerf);
 
     panels.push({
       id: 'left_bottom_guide',
       name: 'Left Bottom Guide Strip',
       width: slotW,
-      height: stripW,
+      height: stripHeight,
       points: stripPoints
     });
 
@@ -717,7 +722,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       id: 'right_bottom_guide',
       name: 'Right Bottom Guide Strip',
       width: slotW,
-      height: stripW,
+      height: stripHeight,
       points: stripPoints
     });
 
@@ -733,57 +738,57 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
     const framePoints: Point2D[] = [
       // 1. Left outer edge with outward-pointing tabs (going from front to back, x = 0, y = 0 to D_frame)
-      { x: 0, y: 0 },
-      { x: 0, y: D_frame * 0.2 - kerf/2 },
-      { x: -t - kerf/2, y: D_frame * 0.2 - kerf/2 },
-      { x: -t - kerf/2, y: D_frame * 0.4 + kerf/2 },
-      { x: 0, y: D_frame * 0.4 + kerf/2 },
-      { x: 0, y: D_frame * 0.6 - kerf/2 },
-      { x: -t - kerf/2, y: D_frame * 0.6 - kerf/2 },
-      { x: -t - kerf/2, y: D_frame * 0.8 + kerf/2 },
-      { x: 0, y: D_frame * 0.8 + kerf/2 },
-      { x: 0, y: D_frame },
+      { x: t, y: 0 },
+      { x: t, y: D_frame * 0.2 - kerf/2 },
+      { x: -kerf/2, y: D_frame * 0.2 - kerf/2 },
+      { x: -kerf/2, y: D_frame * 0.4 + kerf/2 },
+      { x: t, y: D_frame * 0.4 + kerf/2 },
+      { x: t, y: D_frame * 0.6 - kerf/2 },
+      { x: -kerf/2, y: D_frame * 0.6 - kerf/2 },
+      { x: -kerf/2, y: D_frame * 0.8 + kerf/2 },
+      { x: t, y: D_frame * 0.8 + kerf/2 },
+      { x: t, y: D_frame },
 
       // 2. Back outer edge with outward-pointing tabs (going from left to right, y = D_frame, x = 0 to W_frame)
-      { x: tb1_start - kerf/2, y: D_frame },
-      { x: tb1_start - kerf/2, y: D_frame + t + kerf/2 },
-      { x: tb1_end + kerf/2, y: D_frame + t + kerf/2 },
-      { x: tb1_end + kerf/2, y: D_frame },
-      { x: tb2_start - kerf/2, y: D_frame },
-      { x: tb2_start - kerf/2, y: D_frame + t + kerf/2 },
-      { x: tb2_end + kerf/2, y: D_frame + t + kerf/2 },
-      { x: tb2_end + kerf/2, y: D_frame },
-      { x: W_frame, y: D_frame },
+      { x: t + tb1_start - kerf/2, y: D_frame },
+      { x: t + tb1_start - kerf/2, y: D_frame + t + kerf/2 },
+      { x: t + tb1_end + kerf/2, y: D_frame + t + kerf/2 },
+      { x: t + tb1_end + kerf/2, y: D_frame },
+      { x: t + tb2_start - kerf/2, y: D_frame },
+      { x: t + tb2_start - kerf/2, y: D_frame + t + kerf/2 },
+      { x: t + tb2_end + kerf/2, y: D_frame + t + kerf/2 },
+      { x: t + tb2_end + kerf/2, y: D_frame },
+      { x: t + W_frame, y: D_frame },
 
       // 3. Right outer edge with outward-pointing tabs (going from back to front, x = W_frame, y = D_frame down to 0)
-      { x: W_frame, y: D_frame * 0.8 + kerf/2 },
-      { x: W_frame + t + kerf/2, y: D_frame * 0.8 + kerf/2 },
-      { x: W_frame + t + kerf/2, y: D_frame * 0.6 - kerf/2 },
-      { x: W_frame, y: D_frame * 0.6 - kerf/2 },
-      { x: W_frame, y: D_frame * 0.4 + kerf/2 },
-      { x: W_frame + t + kerf/2, y: D_frame * 0.4 + kerf/2 },
-      { x: W_frame + t + kerf/2, y: D_frame * 0.2 - kerf/2 },
-      { x: W_frame, y: D_frame * 0.2 - kerf/2 },
-      { x: W_frame, y: 0 },
+      { x: t + W_frame, y: D_frame * 0.8 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: D_frame * 0.8 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: D_frame * 0.6 - kerf/2 },
+      { x: t + W_frame, y: D_frame * 0.6 - kerf/2 },
+      { x: t + W_frame, y: D_frame * 0.4 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: D_frame * 0.4 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: D_frame * 0.2 - kerf/2 },
+      { x: t + W_frame, y: D_frame * 0.2 - kerf/2 },
+      { x: t + W_frame, y: 0 },
 
       // 4. Front right end
-      { x: W_frame - stripW, y: 0 },
+      { x: t + W_frame - stripW, y: 0 },
 
       // 5. Inner right edge (going from front to back, x = W_frame - stripW, y = 0 to D_frame - stripW)
-      { x: W_frame - stripW, y: D_frame - stripW },
+      { x: t + W_frame - stripW, y: D_frame - stripW },
 
       // 6. Inner back edge (going from right to left, y = D_frame - stripW, x = W_frame - stripW to stripW)
-      { x: stripW, y: D_frame - stripW },
+      { x: t + stripW, y: D_frame - stripW },
 
       // 7. Inner left edge (going from back to front, x = stripW, y = D_frame - stripW to 0)
-      { x: stripW, y: 0 }
+      { x: t + stripW, y: 0 }
     ];
 
     panels.push({
       id: 'top_rail_frame',
       name: 'Unified Top Railing Frame (Flush Top Lip)',
-      width: W_frame,
-      height: D_frame,
+      width: W,
+      height: D,
       points: framePoints
     });
   }
@@ -943,16 +948,16 @@ export function exportToSVG(
   const { sheetWidth, sheetHeight, sheetsCount, placedPanels } = nesting;
   const verticalGap = 20; // 20mm gap between physical stacked cutout boards
   const totalSvgHeight = sheetsCount * sheetHeight + (sheetsCount - 1) * verticalGap;
-  const SCALE = 3.779527559; // 96 DPI scale conversion (96 pixels per inch / 25.4 mm per inch) to guarantee perfect physical scale
+  const SCALE = 1.0; // Pure Millimeters (1 unit = 1 mm) to guarantee perfect physical scale consistency across DXF and SVG formats
 
   let svg = `<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${(sheetWidth * SCALE).toFixed(3)} ${(totalSvgHeight * SCALE).toFixed(3)}" width="${sheetWidth}mm" height="${totalSvgHeight}mm">
   <style>
-    .cut-path { fill: none; stroke: #ff0000; stroke-width: 0.378; stroke-linecap: round; stroke-linejoin: round; }
-    .engrave { fill: none; stroke: #0000ff; stroke-width: 0.756; }
-    .label { font-family: 'Courier New', monospace; font-size: ${(5 * SCALE).toFixed(3)}px; fill: #0000ff; font-weight: bold; }
-    .sheet-boundary { fill: none; stroke: #94a3b8; stroke-width: ${(0.3 * SCALE).toFixed(3)}; stroke-dasharray: ${(2 * SCALE).toFixed(1)},${(2 * SCALE).toFixed(1)}; }
-    .sheet-label { font-family: 'Courier New', monospace; font-size: ${(6 * SCALE).toFixed(3)}px; fill: #94a3b8; font-weight: bold; }
+    .cut-path { fill: none; stroke: #ff0000; stroke-width: 0.15; stroke-linecap: round; stroke-linejoin: round; }
+    .engrave { fill: none; stroke: #0000ff; stroke-width: 0.25; }
+    .label { font-family: 'Courier New', monospace; font-size: ${(4 * SCALE).toFixed(3)}px; fill: #0000ff; font-weight: bold; }
+    .sheet-boundary { fill: none; stroke: #94a3b8; stroke-width: ${(0.15 * SCALE).toFixed(3)}; stroke-dasharray: ${(1.5 * SCALE).toFixed(1)},${(1.5 * SCALE).toFixed(1)}; }
+    .sheet-label { font-family: 'Courier New', monospace; font-size: ${(5 * SCALE).toFixed(3)}px; fill: #94a3b8; font-weight: bold; }
   </style>
 `;
 

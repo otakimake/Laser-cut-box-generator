@@ -199,7 +199,7 @@ export default function ThreeBoxViewer({
           normal.set(0, 0, 1.25); // Slides out forward smoothly along Z-axis!
         } else if (isLidHinged) {
           // Hinged lid sits exactly aligned with side sockets at y = H/2 - 6, pivot is t+10 from back
-          basePos.set(0, H / 2 - 6, 0);
+          basePos.set(0, H / 2 - 6, 8.5);
           rotation.set(-Math.PI / 2, 0, 0);
           normal.set(0, 1, 0); // Hinged lid custom rotation calculated in updateExplosion
         } else {
@@ -241,7 +241,7 @@ export default function ThreeBoxViewer({
         normal.set(1, 0, 0); // Explodes with the right wall outwards
       } else if (panel.id === 'top_rail_frame') {
         // Unified U-shaped Top Railing Frame (Flush top lip)
-        basePos.set(0, H / 2 - t / 2, t / 2);
+        basePos.set(0, H / 2 - t / 2, 0);
         rotation.set(-Math.PI / 2, 0, 0);
         normal.set(0, 1, 0); // Explodes straight upwards!
       } else if (panel.id === 'lid_handle') {
