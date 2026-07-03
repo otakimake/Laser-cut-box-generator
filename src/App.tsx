@@ -138,42 +138,54 @@ export default function App() {
   const [localLaserKerf, setLocalLaserKerf] = useState(params.laserKerf.toString());
 
   useEffect(() => {
-    setLocalWidth(params.width.toString());
+    if (parseFloat(localWidth) !== params.width) {
+      setLocalWidth(params.width.toString());
+    }
   }, [params.width]);
 
   useEffect(() => {
-    setLocalHeight(params.height.toString());
+    if (parseFloat(localHeight) !== params.height) {
+      setLocalHeight(params.height.toString());
+    }
   }, [params.height]);
 
   useEffect(() => {
-    setLocalDepth(params.depth.toString());
+    if (parseFloat(localDepth) !== params.depth) {
+      setLocalDepth(params.depth.toString());
+    }
   }, [params.depth]);
 
   useEffect(() => {
-    setLocalThickness(params.thickness.toString());
+    if (parseFloat(localThickness) !== params.thickness) {
+      setLocalThickness(params.thickness.toString());
+    }
   }, [params.thickness]);
 
   useEffect(() => {
-    setLocalFingerWidth(params.fingerWidth.toString());
+    if (parseFloat(localFingerWidth) !== params.fingerWidth) {
+      setLocalFingerWidth(params.fingerWidth.toString());
+    }
   }, [params.fingerWidth]);
 
   useEffect(() => {
-    setLocalLaserKerf(params.laserKerf.toString());
+    if (parseFloat(localLaserKerf) !== params.laserKerf) {
+      setLocalLaserKerf(params.laserKerf.toString());
+    }
   }, [params.laserKerf]);
 
   const handleWidthChange = (valStr: string) => {
     setLocalWidth(valStr);
     const num = parseFloat(valStr);
-    if (!isNaN(num)) {
-      updateParam('width', Math.max(10, num));
+    if (!isNaN(num) && num >= 5 && num <= 2000) {
+      updateParam('width', num);
     }
   };
 
   const handleWidthBlur = () => {
     const num = parseFloat(localWidth);
-    if (isNaN(num) || num < 20) {
-      updateParam('width', 20);
-      setLocalWidth('20');
+    if (isNaN(num) || num < 5) {
+      updateParam('width', 5);
+      setLocalWidth('5');
     } else if (num > 2000) {
       updateParam('width', 2000);
       setLocalWidth('2000');
@@ -186,16 +198,16 @@ export default function App() {
   const handleHeightChange = (valStr: string) => {
     setLocalHeight(valStr);
     const num = parseFloat(valStr);
-    if (!isNaN(num)) {
-      updateParam('height', Math.max(10, num));
+    if (!isNaN(num) && num >= 5 && num <= 2000) {
+      updateParam('height', num);
     }
   };
 
   const handleHeightBlur = () => {
     const num = parseFloat(localHeight);
-    if (isNaN(num) || num < 20) {
-      updateParam('height', 20);
-      setLocalHeight('20');
+    if (isNaN(num) || num < 5) {
+      updateParam('height', 5);
+      setLocalHeight('5');
     } else if (num > 2000) {
       updateParam('height', 2000);
       setLocalHeight('2000');
@@ -208,16 +220,16 @@ export default function App() {
   const handleDepthChange = (valStr: string) => {
     setLocalDepth(valStr);
     const num = parseFloat(valStr);
-    if (!isNaN(num)) {
-      updateParam('depth', Math.max(10, num));
+    if (!isNaN(num) && num >= 5 && num <= 2000) {
+      updateParam('depth', num);
     }
   };
 
   const handleDepthBlur = () => {
     const num = parseFloat(localDepth);
-    if (isNaN(num) || num < 20) {
-      updateParam('depth', 20);
-      setLocalDepth('20');
+    if (isNaN(num) || num < 5) {
+      updateParam('depth', 5);
+      setLocalDepth('5');
     } else if (num > 2000) {
       updateParam('depth', 2000);
       setLocalDepth('2000');
@@ -230,8 +242,8 @@ export default function App() {
   const handleThicknessChange = (valStr: string) => {
     setLocalThickness(valStr);
     const num = parseFloat(valStr);
-    if (!isNaN(num)) {
-      updateParam('thickness', Math.max(0.1, num));
+    if (!isNaN(num) && num >= 0.5 && num <= 50) {
+      updateParam('thickness', num);
     }
   };
 
@@ -252,8 +264,8 @@ export default function App() {
   const handleFingerWidthChange = (valStr: string) => {
     setLocalFingerWidth(valStr);
     const num = parseFloat(valStr);
-    if (!isNaN(num)) {
-      updateParam('fingerWidth', Math.max(2, num));
+    if (!isNaN(num) && num >= 2 && num <= 200) {
+      updateParam('fingerWidth', num);
     }
   };
 
@@ -274,8 +286,8 @@ export default function App() {
   const handleLaserKerfChange = (valStr: string) => {
     setLocalLaserKerf(valStr);
     const num = parseFloat(valStr);
-    if (!isNaN(num)) {
-      updateParam('laserKerf', Math.max(-1.0, Math.min(1.0, num)));
+    if (!isNaN(num) && num >= -1.0 && num <= 1.0) {
+      updateParam('laserKerf', num);
     }
   };
 
@@ -713,7 +725,7 @@ export default function App() {
                 <span className="text-xs font-bold text-slate-650">Outer Width (X)</span>
                 <input
                   type="number"
-                  min="20"
+                  min="5"
                   max="2000"
                   value={localWidth}
                   onChange={(e) => handleWidthChange(e.target.value)}
@@ -723,7 +735,7 @@ export default function App() {
               </div>
               <input
                 type="range"
-                min="50"
+                min="5"
                 max="500"
                 step="1"
                 value={params.width}
@@ -738,7 +750,7 @@ export default function App() {
                 <span className="text-xs font-bold text-slate-650">Outer Height (Y)</span>
                 <input
                   type="number"
-                  min="20"
+                  min="5"
                   max="2000"
                   value={localHeight}
                   onChange={(e) => handleHeightChange(e.target.value)}
@@ -748,7 +760,7 @@ export default function App() {
               </div>
               <input
                 type="range"
-                min="40"
+                min="5"
                 max="400"
                 step="1"
                 value={params.height}
@@ -763,7 +775,7 @@ export default function App() {
                 <span className="text-xs font-bold text-slate-650">Outer Depth (Z)</span>
                 <input
                   type="number"
-                  min="20"
+                  min="5"
                   max="2000"
                   value={localDepth}
                   onChange={(e) => handleDepthChange(e.target.value)}
@@ -773,7 +785,7 @@ export default function App() {
               </div>
               <input
                 type="range"
-                min="50"
+                min="5"
                 max="500"
                 step="1"
                 value={params.depth}

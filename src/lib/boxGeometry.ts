@@ -318,15 +318,15 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
       // Top strip slots on Right
       rightHoles.push(createRectHole(
-        slotW_top * 0.2 + kerf/2,
+        t + slotW_top * 0.2 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        slotW_top * 0.4 - kerf/2,
+        t + slotW_top * 0.4 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
       rightHoles.push(createRectHole(
-        slotW_top * 0.6 + kerf/2,
+        t + slotW_top * 0.6 + kerf/2,
         y_top_center - t/2 + kerf/2,
-        slotW_top * 0.8 - kerf/2,
+        t + slotW_top * 0.8 - kerf/2,
         y_top_center + t/2 - kerf/2
       ));
 
@@ -739,14 +739,14 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     const framePoints: Point2D[] = [
       // 1. Left outer edge with outward-pointing tabs (going from front to back, x = 0, y = 0 to D_frame)
       { x: t, y: 0 },
-      { x: t, y: D_frame * 0.2 - kerf/2 },
-      { x: -kerf/2, y: D_frame * 0.2 - kerf/2 },
-      { x: -kerf/2, y: D_frame * 0.4 + kerf/2 },
-      { x: t, y: D_frame * 0.4 + kerf/2 },
-      { x: t, y: D_frame * 0.6 - kerf/2 },
-      { x: -kerf/2, y: D_frame * 0.6 - kerf/2 },
-      { x: -kerf/2, y: D_frame * 0.8 + kerf/2 },
-      { x: t, y: D_frame * 0.8 + kerf/2 },
+      { x: t, y: t + D_frame * 0.2 - kerf/2 },
+      { x: -kerf/2, y: t + D_frame * 0.2 - kerf/2 },
+      { x: -kerf/2, y: t + D_frame * 0.4 + kerf/2 },
+      { x: t, y: t + D_frame * 0.4 + kerf/2 },
+      { x: t, y: t + D_frame * 0.6 - kerf/2 },
+      { x: -kerf/2, y: t + D_frame * 0.6 - kerf/2 },
+      { x: -kerf/2, y: t + D_frame * 0.8 + kerf/2 },
+      { x: t, y: t + D_frame * 0.8 + kerf/2 },
       { x: t, y: D_frame },
 
       // 2. Back outer edge with outward-pointing tabs (going from left to right, y = D_frame, x = 0 to W_frame)
@@ -761,14 +761,14 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       { x: t + W_frame, y: D_frame },
 
       // 3. Right outer edge with outward-pointing tabs (going from back to front, x = W_frame, y = D_frame down to 0)
-      { x: t + W_frame, y: D_frame * 0.8 + kerf/2 },
-      { x: t + W_frame + t + kerf/2, y: D_frame * 0.8 + kerf/2 },
-      { x: t + W_frame + t + kerf/2, y: D_frame * 0.6 - kerf/2 },
-      { x: t + W_frame, y: D_frame * 0.6 - kerf/2 },
-      { x: t + W_frame, y: D_frame * 0.4 + kerf/2 },
-      { x: t + W_frame + t + kerf/2, y: D_frame * 0.4 + kerf/2 },
-      { x: t + W_frame + t + kerf/2, y: D_frame * 0.2 - kerf/2 },
-      { x: t + W_frame, y: D_frame * 0.2 - kerf/2 },
+      { x: t + W_frame, y: t + D_frame * 0.8 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: t + D_frame * 0.8 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: t + D_frame * 0.6 - kerf/2 },
+      { x: t + W_frame, y: t + D_frame * 0.6 - kerf/2 },
+      { x: t + W_frame, y: t + D_frame * 0.4 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: t + D_frame * 0.4 + kerf/2 },
+      { x: t + W_frame + t + kerf/2, y: t + D_frame * 0.2 - kerf/2 },
+      { x: t + W_frame, y: t + D_frame * 0.2 - kerf/2 },
       { x: t + W_frame, y: 0 },
 
       // 4. Front right end
