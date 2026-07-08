@@ -451,7 +451,7 @@ export default function FlatSheetLayout({
           >
             <svg
               viewBox={showAllSheets ? `0 0 ${sheetWidth} ${totalSvgHeight}` : `0 0 ${sheetWidth} ${sheetHeight}`}
-              className="w-full max-w-full h-auto drop-shadow-sm select-none"
+              className="w-full max-w-full h-auto drop-shadow-sm select-none cad-cursor-default"
               style={{ maxHeight: showAllSheets ? '420px' : '380px' }}
             >
               <defs>

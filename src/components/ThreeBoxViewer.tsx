@@ -613,7 +613,7 @@ export default function ThreeBoxViewer({
       className="relative w-full h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col" 
       ref={containerRef}
     >
-      <canvas className="w-full h-full flex-grow cursor-grab active:cursor-grabbing outline-none" id="canvas-3d-box" ref={canvasRef} />
+      <canvas className="w-full h-full flex-grow cad-cursor-grab outline-none" id="canvas-3d-box" ref={canvasRef} />
 
       {/* Floating help / controls layer */}
       <div className="absolute top-4 left-4 pointer-events-none bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm">

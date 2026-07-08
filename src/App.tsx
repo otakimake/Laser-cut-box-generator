@@ -797,54 +797,6 @@ export default function App() {
 
           {/* Joinery & Materials Spec */}
           <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-              <Scissors className="w-3.5 h-3.5 text-blue-600" /> Material Properties
-            </h3>
-
-            {/* Material Preset Picker */}
-            <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-2 shadow-sm">
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Select Material</span>
-              <div className="flex flex-col gap-1.5">
-                {WOOD_TYPES.map((wood) => {
-                  const isSelected = selectedWood === wood.value;
-                  return (
-                    <button
-                      key={wood.value}
-                      onClick={() => handleMaterialChange(wood.value)}
-                      className={`flex items-center justify-between p-2 rounded-lg border text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-blue-50 border-blue-500 text-slate-900 shadow-sm'
-                          : 'bg-slate-50 border-slate-200 text-slate-650 hover:bg-slate-100 hover:text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={`w-4 h-4 rounded-full shrink-0 border transition-transform ${
-                            isSelected ? 'border-blue-600 scale-110 shadow-sm' : 'border-slate-300'
-                          }`}
-                          style={{ backgroundColor: wood.color }}
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold truncate leading-snug">{wood.name}</span>
-                          <span className="text-[9px] text-slate-500 truncate leading-none mt-0.5">
-                            Optimal Kerf: {wood.kerf.toFixed(2)}mm
-                          </span>
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <span className="text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 uppercase tracking-wider">
-                          Active
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] text-slate-600 leading-relaxed bg-slate-50 p-2 rounded border border-slate-150 mt-0.5">
-                {WOOD_TYPES.find((w) => w.value === selectedWood)?.description}
-              </p>
-            </div>
-
             {/* Material Thick */}
             <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1.5 shadow-sm">
               <div className="flex justify-between items-center">
