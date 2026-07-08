@@ -107,7 +107,7 @@ const PRESETS: Preset[] = [
 ];
 
 const WOOD_TYPES = [
-  { name: 'MDF (Fiberboard)', color: '#cb9d6c', value: 'mdf', description: 'Engineered wood fiber. Smooth surface, uniform, excellent for gluing and painting.', kerf: 0.20 },
+  { name: 'MDF (Fiberboard)', color: '#cb9d6c', value: 'mdf', description: 'Engineered wood fiber. Smooth surface, uniform, excellent for gluing and painting.', kerf: 0.15 },
   { name: 'Acrylic', color: '#2dd4bf', value: 'acrylic', description: 'Rigid transparent thermoplastic. Smooth polished laser-flame edges & high friction-fit accuracy.', kerf: 0.05 },
   { name: 'Birch Plywood', color: '#e2ba8c', value: 'birch', description: 'Classic multi-layer wood. Exceptional strength, lightweight, and natural warm grain.', kerf: 0.10 },
   { name: 'Bamboo', color: '#ecdbb4', value: 'bamboo', description: 'Highly sustainable, dense structural grass. Beautiful striped grain, strong and durable.', kerf: 0.08 }
@@ -121,7 +121,7 @@ export default function App() {
     depth: 120,
     thickness: 3.0,
     fingerWidth: 12.0,
-    laserKerf: 0.20,
+    laserKerf: 0.15,
     boxType: 'closed',
     lidType: 'sliding',
     hasEnvelopeSlot: false,
@@ -674,7 +674,7 @@ export default function App() {
                 depth: 120,
                 thickness: 3.0,
                 fingerWidth: 12.0,
-                laserKerf: 0.20,
+                laserKerf: 0.15,
                 boxType: 'closed',
                 lidType: 'sliding'
               });
