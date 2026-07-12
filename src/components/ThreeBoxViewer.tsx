@@ -188,16 +188,12 @@ export default function ThreeBoxViewer({
       const isLidHinged = params.boxType === 'removable-lid' && params.lidType === 'hinged';
 
       if (panel.id === 'bottom') {
-        if (params.isLantern) {
-          basePos.set(0, -H / 2 - t / 2, 0);
-        } else {
-          basePos.set(0, -H / 2 + t / 2, 0);
-        }
+        basePos.set(0, -H / 2 + t / 2, 0);
         rotation.set(Math.PI / 2, 0, 0);
         normal.set(0, -1, 0);
       } else if (panel.id === 'top') {
         if (params.isLantern) {
-          basePos.set(0, H / 2 + t / 2, 0);
+          basePos.set(0, H / 2 - t / 2, 0);
           rotation.set(-Math.PI / 2, 0, 0);
           normal.set(0, 1, 0);
         } else if (isLidSliding) {
@@ -442,7 +438,7 @@ export default function ThreeBoxViewer({
       panelsGroupRef.current = panelsGroup;
 
       // GRID HELPER & FLOOR SHADOW PLANE (Added directly to pivot for unified Fusion rotation)
-      const lowestY = params.isLantern ? (-params.height / 2 - params.thickness) : (-params.height / 2);
+      const lowestY = -params.height / 2;
 
       const gridHelper = new THREE.GridHelper(maxDim * 5, 24, '#3b82f6', '#cbd5e1');
       gridHelper.position.y = lowestY;

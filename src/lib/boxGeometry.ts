@@ -607,6 +607,29 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
         D_base - baseExt - kerf/2
       ));
     }
+
+    const segD = D / Nv;
+    for (let i = 0; i < Nv; i += 2) {
+      const v1 = i * segD;
+      const v2 = (i + 1) * segD;
+      
+      // Left panel slots
+      baseHoles.push(createRectHole(
+        baseExt + kerf/2,
+        baseExt + v1 + kerf/2,
+        baseExt + t - kerf/2,
+        baseExt + v2 - kerf/2
+      ));
+      
+      // Right panel slots
+      baseHoles.push(createRectHole(
+        W_base - baseExt - t + kerf/2,
+        baseExt + v1 + kerf/2,
+        W_base - baseExt - kerf/2,
+        baseExt + v2 - kerf/2
+      ));
+    }
+
     panels.push({
       id: 'bottom',
       name: 'Lantern Extended Base',
@@ -662,6 +685,28 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
           D_top - topExt - t + kerf/2,
           topExt + u2 - kerf/2,
           D_top - topExt - kerf/2
+        ));
+      }
+
+      const segD = D / Nv;
+      for (let i = 0; i < Nv; i += 2) {
+        const v1 = i * segD;
+        const v2 = (i + 1) * segD;
+        
+        // Left panel slots
+        topHoles.push(createRectHole(
+          topExt + kerf/2,
+          topExt + v1 + kerf/2,
+          topExt + t - kerf/2,
+          topExt + v2 - kerf/2
+        ));
+        
+        // Right panel slots
+        topHoles.push(createRectHole(
+          W_top - topExt - t + kerf/2,
+          topExt + v1 + kerf/2,
+          W_top - topExt - kerf/2,
+          topExt + v2 - kerf/2
         ));
       }
       
@@ -926,7 +971,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     topEdgeTypeLeft = 'flat';
   }
   const leftPoints = isLantern
-    ? generatePanelPoints(D, H, t, Nv, Nh, 'flat', 'female', 'flat', 'female', kerf)
+    ? generatePanelPoints(D, H, t, Nv, Nh, 'male', 'female', 'male', 'female', kerf)
     : generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeLeft, 'female', kerf);
   panels.push({
     id: 'left',
@@ -945,7 +990,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     topEdgeTypeRight = 'flat';
   }
   const rightPoints = isLantern
-    ? generatePanelPoints(D, H, t, Nv, Nh, 'flat', 'female', 'flat', 'female', kerf)
+    ? generatePanelPoints(D, H, t, Nv, Nh, 'male', 'female', 'male', 'female', kerf)
     : generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeRight, 'female', kerf);
   panels.push({
     id: 'right',
