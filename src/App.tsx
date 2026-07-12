@@ -126,7 +126,12 @@ export default function App() {
     lidType: 'sliding',
     hasEnvelopeSlot: false,
     envelopeSlotWidth: 150,
-    envelopeSlotThickness: 6
+    envelopeSlotThickness: 6,
+    isLantern: false,
+    lanternBaseExtension: 15,
+    lanternTopExtension: 15,
+    lanternPattern: 'none',
+    lanternTopHoleSize: 40
   });
 
   // Local typed states for numeric inputs to allow smooth typing without instant strict bounding
@@ -136,6 +141,27 @@ export default function App() {
   const [localThickness, setLocalThickness] = useState(params.thickness.toString());
   const [localFingerWidth, setLocalFingerWidth] = useState(params.fingerWidth.toString());
   const [localLaserKerf, setLocalLaserKerf] = useState(params.laserKerf.toString());
+  const [localBaseExtension, setLocalBaseExtension] = useState('15');
+  const [localTopExtension, setLocalTopExtension] = useState('15');
+  const [localTopHoleSize, setLocalTopHoleSize] = useState('40');
+
+  useEffect(() => {
+    if (params.lanternBaseExtension !== undefined && parseFloat(localBaseExtension) !== params.lanternBaseExtension) {
+      setLocalBaseExtension(params.lanternBaseExtension.toString());
+    }
+  }, [params.lanternBaseExtension]);
+
+  useEffect(() => {
+    if (params.lanternTopExtension !== undefined && parseFloat(localTopExtension) !== params.lanternTopExtension) {
+      setLocalTopExtension(params.lanternTopExtension.toString());
+    }
+  }, [params.lanternTopExtension]);
+
+  useEffect(() => {
+    if (params.lanternTopHoleSize !== undefined && parseFloat(localTopHoleSize) !== params.lanternTopHoleSize) {
+      setLocalTopHoleSize(params.lanternTopHoleSize.toString());
+    }
+  }, [params.lanternTopHoleSize]);
 
   useEffect(() => {
     if (parseFloat(localWidth) !== params.width) {
@@ -305,6 +331,72 @@ export default function App() {
     } else {
       updateParam('laserKerf', Math.round(num * 1000) / 1000);
       setLocalLaserKerf((Math.round(num * 1000) / 1000).toString());
+    }
+  };
+
+  const handleBaseExtensionChange = (valStr: string) => {
+    setLocalBaseExtension(valStr);
+    const num = parseFloat(valStr);
+    if (!isNaN(num) && num >= 0 && num <= 200) {
+      updateParam('lanternBaseExtension', num);
+    }
+  };
+
+  const handleBaseExtensionBlur = () => {
+    const num = parseFloat(localBaseExtension);
+    if (isNaN(num) || num < 0) {
+      updateParam('lanternBaseExtension', 0);
+      setLocalBaseExtension('0');
+    } else if (num > 200) {
+      updateParam('lanternBaseExtension', 200);
+      setLocalBaseExtension('200');
+    } else {
+      updateParam('lanternBaseExtension', Math.round(num * 10) / 10);
+      setLocalBaseExtension((Math.round(num * 10) / 10).toString());
+    }
+  };
+
+  const handleTopExtensionChange = (valStr: string) => {
+    setLocalTopExtension(valStr);
+    const num = parseFloat(valStr);
+    if (!isNaN(num) && num >= 0 && num <= 200) {
+      updateParam('lanternTopExtension', num);
+    }
+  };
+
+  const handleTopExtensionBlur = () => {
+    const num = parseFloat(localTopExtension);
+    if (isNaN(num) || num < 0) {
+      updateParam('lanternTopExtension', 0);
+      setLocalTopExtension('0');
+    } else if (num > 200) {
+      updateParam('lanternTopExtension', 200);
+      setLocalTopExtension('200');
+    } else {
+      updateParam('lanternTopExtension', Math.round(num * 10) / 10);
+      setLocalTopExtension((Math.round(num * 10) / 10).toString());
+    }
+  };
+
+  const handleTopHoleSizeChange = (valStr: string) => {
+    setLocalTopHoleSize(valStr);
+    const num = parseFloat(valStr);
+    if (!isNaN(num) && num >= 5 && num <= 300) {
+      updateParam('lanternTopHoleSize', num);
+    }
+  };
+
+  const handleTopHoleSizeBlur = () => {
+    const num = parseFloat(localTopHoleSize);
+    if (isNaN(num) || num < 5) {
+      updateParam('lanternTopHoleSize', 5);
+      setLocalTopHoleSize('5');
+    } else if (num > 300) {
+      updateParam('lanternTopHoleSize', 300);
+      setLocalTopHoleSize('300');
+    } else {
+      updateParam('lanternTopHoleSize', Math.round(num * 10) / 10);
+      setLocalTopHoleSize((Math.round(num * 10) / 10).toString());
     }
   };
 
@@ -964,6 +1056,114 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* Lantern Feature Section */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Lantern Customization
+            </h3>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-750 block">Enable Lantern Mode</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">Creates extended base & top panels</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!params.isLantern}
+                    onChange={(e) => updateParam('isLantern', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
+                </label>
+              </div>
+
+              {params.isLantern && (
+                <div className="flex flex-col gap-4 mt-2 pt-3 border-t border-slate-100">
+                  {/* Base Extension */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-slate-500">Base Extension (mm)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="200"
+                        value={localBaseExtension}
+                        onChange={(e) => handleBaseExtensionChange(e.target.value)}
+                        onBlur={handleBaseExtensionBlur}
+                        className="w-16 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={params.lanternBaseExtension || 0}
+                      onChange={(e) => updateParam('lanternBaseExtension', Number(e.target.value))}
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Top Extension */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-slate-500">Top Extension (mm)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="200"
+                        value={localTopExtension}
+                        onChange={(e) => handleTopExtensionChange(e.target.value)}
+                        onBlur={handleTopExtensionBlur}
+                        className="w-16 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={params.lanternTopExtension || 0}
+                      onChange={(e) => updateParam('lanternTopExtension', Number(e.target.value))}
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Top Hole Size */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-slate-500">Top Vent Hole (mm)</span>
+                      <input
+                        type="number"
+                        min="5"
+                        max="300"
+                        value={localTopHoleSize}
+                        onChange={(e) => handleTopHoleSizeChange(e.target.value)}
+                        onBlur={handleTopHoleSizeBlur}
+                        className="w-16 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-800 text-right focus:outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max={Math.max(15, Math.min(params.width, params.depth) - 20)}
+                      step="1"
+                      value={params.lanternTopHoleSize || 10}
+                      onChange={(e) => updateParam('lanternTopHoleSize', Number(e.target.value))}
+                      className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  <p className="text-[9px] text-slate-500 leading-relaxed bg-slate-50 p-2 rounded border border-slate-100">
+                    💡 <strong>Pro Tip:</strong> Lantern mode adds extended overhanging top and bottom plates with slot connections, plus custom vent and decorative face patterns, converting your box into a stunning functional light fixture.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Laser Joint Style Selector */}
           <div className="flex flex-col gap-3">

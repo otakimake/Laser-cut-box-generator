@@ -22,6 +22,11 @@ export interface BoxParams {
   hasEnvelopeSlot?: boolean;
   envelopeSlotWidth?: number;
   envelopeSlotThickness?: number;
+  isLantern?: boolean;
+  lanternBaseExtension?: number;
+  lanternTopExtension?: number;
+  lanternPattern?: 'none' | 'butterfly' | 'floral' | 'starry' | 'geometric';
+  lanternTopHoleSize?: number;
 }
 
 /**
@@ -241,6 +246,214 @@ export function createRectHole(x1: number, y1: number, x2: number, y2: number): 
   ];
 }
 
+export function createStarPoints(cx: number, cy: number, rOuter: number, rInner: number, points: number = 5): Point2D[] {
+  const pts: Point2D[] = [];
+  for (let i = 0; i < points * 2; i++) {
+    const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? rOuter : rInner;
+    pts.push({
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r
+    });
+  }
+  return pts;
+}
+
+export function createCrescentMoonPoints(cx: number, cy: number, r: number, steps: number = 24): Point2D[] {
+  const pts: Point2D[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const angle = -Math.PI * 0.7 + (i / steps) * Math.PI * 1.4;
+    pts.push({
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r
+    });
+  }
+  const innerR = r * 0.85;
+  const shiftX = r * 0.4;
+  for (let i = steps; i >= 0; i--) {
+    const angle = -Math.PI * 0.65 + (i / steps) * Math.PI * 1.3;
+    pts.push({
+      x: cx + shiftX + Math.cos(angle) * innerR,
+      y: cy + Math.sin(angle) * innerR
+    });
+  }
+  return pts;
+}
+
+export function createPetalPoints(cx: number, cy: number, angle: number, length: number, width: number): Point2D[] {
+  const pts: Point2D[] = [];
+  const steps = 10;
+  
+  const tipX = cx + Math.cos(angle) * length;
+  const tipY = cy + Math.sin(angle) * length;
+  
+  const leftAngle = angle - Math.PI / 2;
+  const ctrlLX = cx + Math.cos(angle) * (length * 0.4) + Math.cos(leftAngle) * width;
+  const ctrlLY = cy + Math.sin(angle) * (length * 0.4) + Math.sin(leftAngle) * width;
+  
+  const rightAngle = angle + Math.PI / 2;
+  const ctrlRX = cx + Math.cos(angle) * (length * 0.4) + Math.cos(rightAngle) * width;
+  const ctrlRY = cy + Math.sin(angle) * (length * 0.4) + Math.sin(rightAngle) * width;
+  
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = (1-t)*(1-t)*cx + 2*(1-t)*t*ctrlLX + t*t*tipX;
+    const y = (1-t)*(1-t)*cy + 2*(1-t)*t*ctrlLY + t*t*tipY;
+    pts.push({ x, y });
+  }
+  
+  for (let i = steps; i >= 0; i--) {
+    const t = i / steps;
+    const x = (1-t)*(1-t)*tipX + 2*(1-t)*t*ctrlRX + t*t*cx;
+    const y = (1-t)*(1-t)*tipY + 2*(1-t)*t*ctrlRY + t*t*cy;
+    pts.push({ x, y });
+  }
+  
+  return pts;
+}
+
+export function createButterflyPoints(cx: number, cy: number, scale: number): Point2D[][] {
+  const wings: Point2D[][] = [];
+  
+  const body: Point2D[] = [];
+  const bodySteps = 16;
+  const bodyW = scale * 0.08;
+  const bodyH = scale * 0.42;
+  for (let i = 0; i < bodySteps; i++) {
+    const angle = (i / bodySteps) * Math.PI * 2;
+    body.push({
+      x: cx + Math.cos(angle) * bodyW,
+      y: cy + Math.sin(angle) * bodyH
+    });
+  }
+  wings.push(body);
+  
+  const drawWingCell = (isRight: boolean, isUpper: boolean) => {
+    const pts: Point2D[] = [];
+    const dir = isRight ? 1 : -1;
+    const steps = 12;
+    
+    const startX = cx + dir * bodyW * 0.5;
+    const startY = cy + (isUpper ? bodyH * 0.2 : -bodyH * 0.2);
+    
+    const tipX = cx + dir * scale * (isUpper ? 0.48 : 0.38);
+    const tipY = cy + scale * (isUpper ? 0.35 : -0.28);
+    
+    const ctrl1X = cx + dir * scale * (isUpper ? 0.18 : 0.12);
+    const ctrl1Y = cy + scale * (isUpper ? 0.45 : -0.08);
+    
+    const ctrl2X = cx + dir * scale * (isUpper ? 0.45 : 0.35);
+    const ctrl2Y = cy + scale * (isUpper ? 0.05 : -0.38);
+    
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = (1-t)*(1-t)*startX + 2*(1-t)*t*ctrl1X + t*t*tipX;
+      const y = (1-t)*(1-t)*startY + 2*(1-t)*t*ctrl1Y + t*t*tipY;
+      pts.push({ x, y });
+    }
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = (1-t)*(1-t)*tipX + 2*(1-t)*t*ctrl2X + t*t*startX;
+      const y = (1-t)*(1-t)*tipY + 2*(1-t)*t*ctrl2Y + t*t*startY;
+      pts.push({ x, y });
+    }
+    return pts;
+  };
+  
+  wings.push(drawWingCell(true, true));
+  wings.push(drawWingCell(true, false));
+  wings.push(drawWingCell(false, true));
+  wings.push(drawWingCell(false, false));
+  
+  const antennaL: Point2D[] = [
+    { x: cx - bodyW * 0.2, y: cy + bodyH * 0.8 },
+    { x: cx - bodyW * 0.2 - scale * 0.08, y: cy + bodyH * 0.8 + scale * 0.15 },
+    { x: cx - bodyW * 0.2 - scale * 0.12, y: cy + bodyH * 0.8 + scale * 0.13 },
+    { x: cx - bodyW * 0.2, y: cy + bodyH * 0.8 }
+  ];
+  const antennaR: Point2D[] = [
+    { x: cx + bodyW * 0.2, y: cy + bodyH * 0.8 },
+    { x: cx + bodyW * 0.2 + scale * 0.08, y: cy + bodyH * 0.8 + scale * 0.15 },
+    { x: cx + bodyW * 0.2 + scale * 0.12, y: cy + bodyH * 0.8 + scale * 0.13 },
+    { x: cx + bodyW * 0.2, y: cy + bodyH * 0.8 }
+  ];
+  wings.push(antennaL);
+  wings.push(antennaR);
+  
+  return wings;
+}
+
+export function create8PointStar(cx: number, cy: number, rOuter: number, rInner: number): Point2D[] {
+  return createStarPoints(cx, cy, rOuter, rInner, 8);
+}
+
+export function createDiamondPoints(cx: number, cy: number, w: number, h: number): Point2D[] {
+  return [
+    { x: cx, y: cy - h/2 },
+    { x: cx + w/2, y: cy },
+    { x: cx, y: cy + h/2 },
+    { x: cx - w/2, y: cy }
+  ];
+}
+
+export function generateDecorativePattern(
+  pWidth: number,
+  pHeight: number,
+  pattern: 'none' | 'butterfly' | 'floral' | 'starry' | 'geometric'
+): Point2D[][] {
+  const holes: Point2D[][] = [];
+  const cx = pWidth / 2;
+  const cy = pHeight / 2;
+  
+  const maxW = pWidth - 30;
+  const maxH = pHeight - 30;
+  const scale = Math.min(maxW, maxH) * 0.85;
+  
+  if (scale <= 15 || pattern === 'none') return [];
+  
+  if (pattern === 'starry') {
+    holes.push(createCrescentMoonPoints(cx - scale * 0.08, cy, scale * 0.32));
+    holes.push(createStarPoints(cx + scale * 0.22, cy + scale * 0.22, scale * 0.10, scale * 0.04, 5));
+    holes.push(createStarPoints(cx - scale * 0.22, cy - scale * 0.22, scale * 0.08, scale * 0.03, 5));
+    holes.push(createStarPoints(cx + scale * 0.25, cy - scale * 0.18, scale * 0.06, scale * 0.025, 4));
+    holes.push(createStarPoints(cx - scale * 0.25, cy + scale * 0.18, scale * 0.05, scale * 0.02, 4));
+  } else if (pattern === 'floral') {
+    holes.push(createCirclePoints(cx, cy, scale * 0.08));
+    const petalLen = scale * 0.40;
+    const petalWid = scale * 0.085;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI) / 4;
+      holes.push(createPetalPoints(cx, cy, angle, petalLen, petalWid));
+    }
+    const petalLen2 = scale * 0.26;
+    const petalWid2 = scale * 0.05;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI) / 4 + Math.PI / 8;
+      holes.push(createPetalPoints(cx, cy, angle, petalLen2, petalWid2));
+    }
+  } else if (pattern === 'butterfly') {
+    holes.push(...createButterflyPoints(cx, cy, scale * 0.85));
+  } else if (pattern === 'geometric') {
+    holes.push(create8PointStar(cx, cy, scale * 0.25, scale * 0.12));
+    const dW = scale * 0.12;
+    const dH = scale * 0.12;
+    const offset = scale * 0.32;
+    
+    holes.push(createDiamondPoints(cx, cy - offset, dW, dH));
+    holes.push(createDiamondPoints(cx, cy + offset, dW, dH));
+    holes.push(createDiamondPoints(cx - offset, cy, dW, dH));
+    holes.push(createDiamondPoints(cx + offset, cy, dW, dH));
+    
+    const diagOffset = offset * 0.707;
+    holes.push(createDiamondPoints(cx - diagOffset, cy - diagOffset, dW * 0.75, dH * 0.75));
+    holes.push(createDiamondPoints(cx + diagOffset, cy - diagOffset, dW * 0.75, dH * 0.75));
+    holes.push(createDiamondPoints(cx - diagOffset, cy + diagOffset, dW * 0.75, dH * 0.75));
+    holes.push(createDiamondPoints(cx + diagOffset, cy + diagOffset, dW * 0.75, dH * 0.75));
+  }
+  
+  return holes;
+}
+
 /**
  * Returns all generated panels based on the box parameters
  */
@@ -256,9 +469,12 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
   const panels: PanelData[] = [];
 
   // Setup holes storage for each face panel
+  let frontHoles: Point2D[][] = [];
   let leftHoles: Point2D[][] = [];
   let rightHoles: Point2D[][] = [];
   let backHoles: Point2D[][] = [];
+
+  const isLantern = params.isLantern || false;
 
   // Determine pocket/groove features under different lidTypes
   if (boxType === 'removable-lid') {
@@ -359,20 +575,101 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
   // 1. Bottom Panel (W x D)
   // Edges: 0:Front(W), 1:Right(D), 2:Back(W), 3:Left(D)
-  // Standard: All Male
-  const bottomPoints = generatePanelPoints(W, D, t, Nu, Nv, 'male', 'male', 'male', 'male', kerf);
-  panels.push({ id: 'bottom', name: 'Bottom Panel', width: W, height: D, points: bottomPoints });
+  if (isLantern) {
+    const baseExt = params.lanternBaseExtension ?? 15;
+    const W_base = W + 2 * baseExt;
+    const D_base = D + 2 * baseExt;
+    const basePoints = [
+      { x: 0, y: 0 },
+      { x: W_base, y: 0 },
+      { x: W_base, y: D_base },
+      { x: 0, y: D_base }
+    ];
+    const baseHoles: Point2D[][] = [];
+    const segW = W / Nu;
+    for (let i = 0; i < Nu; i += 2) {
+      const u1 = i * segW;
+      const u2 = (i + 1) * segW;
+      
+      // Back panel slots
+      baseHoles.push(createRectHole(
+        baseExt + u1 + kerf/2,
+        baseExt + kerf/2,
+        baseExt + u2 - kerf/2,
+        baseExt + t - kerf/2
+      ));
+      
+      // Front panel slots
+      baseHoles.push(createRectHole(
+        baseExt + u1 + kerf/2,
+        D_base - baseExt - t + kerf/2,
+        baseExt + u2 - kerf/2,
+        D_base - baseExt - kerf/2
+      ));
+    }
+    panels.push({
+      id: 'bottom',
+      name: 'Lantern Extended Base',
+      width: W_base,
+      height: D_base,
+      points: basePoints,
+      holes: baseHoles.length > 0 ? baseHoles : undefined
+    });
+  } else {
+    const bottomPoints = generatePanelPoints(W, D, t, Nu, Nv, 'male', 'male', 'male', 'male', kerf);
+    panels.push({ id: 'bottom', name: 'Bottom Panel', width: W, height: D, points: bottomPoints });
+  }
 
   // 2. Top Panel (W x D)
-  // If open-top: no panel
-  if (boxType !== 'open-top') {
+  // If open-top: no panel, unless in lantern mode
+  if (boxType !== 'open-top' || isLantern) {
     let topPoints: Point2D[] = [];
     let topHoles: Point2D[][] = [];
     let name = 'Top Panel';
     let pWidth = W;
     let pHeight = D;
 
-    if (boxType === 'removable-lid') {
+    if (isLantern) {
+      const topExt = params.lanternTopExtension ?? 15;
+      const W_top = W + 2 * topExt;
+      const D_top = D + 2 * topExt;
+      pWidth = W_top;
+      pHeight = D_top;
+      name = 'Lantern Extended Top';
+      topPoints = [
+        { x: 0, y: 0 },
+        { x: W_top, y: 0 },
+        { x: W_top, y: D_top },
+        { x: 0, y: D_top }
+      ];
+      
+      const segW = W / Nu;
+      for (let i = 0; i < Nu; i += 2) {
+        const u1 = i * segW;
+        const u2 = (i + 1) * segW;
+        
+        // Back panel slots
+        topHoles.push(createRectHole(
+          topExt + u1 + kerf/2,
+          topExt + kerf/2,
+          topExt + u2 - kerf/2,
+          topExt + t - kerf/2
+        ));
+        
+        // Front panel slots
+        topHoles.push(createRectHole(
+          topExt + u1 + kerf/2,
+          D_top - topExt - t + kerf/2,
+          topExt + u2 - kerf/2,
+          D_top - topExt - kerf/2
+        ));
+      }
+      
+      const holeSize = params.lanternTopHoleSize ?? 40;
+      if (holeSize > 5) {
+        topHoles.push(createCirclePoints(W_top / 2, D_top / 2, holeSize / 2, 32));
+      }
+    } else if (boxType === 'removable-lid') {
       name = 'Removable Lid';
       if (lidType === 'friction') {
         topPoints = generatePanelPoints(W, D, t, Nu, Nv, 'male', 'male', 'male', 'male', kerf);
@@ -510,7 +807,9 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
   // 3. Front Panel (W x H)
   let fHeight = H;
   let topEdgeTypeFront: EdgeType = boxType === 'open-top' ? 'flat' : 'female';
-  if (boxType === 'removable-lid') {
+  if (isLantern) {
+    topEdgeTypeFront = 'male';
+  } else if (boxType === 'removable-lid') {
     if (lidType === 'sliding') {
       // Shorter flat top edge to allow lid to slide forward over the front
       // The bottom guide strip top surface is at H - 2*t - 0.4.
@@ -525,9 +824,11 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       topEdgeTypeFront = 'flat';
     }
   }
-  let frontPoints = generatePanelPoints(W, fHeight, t, Nu, Nh, 'female', 'male', topEdgeTypeFront, 'male', kerf);
+  let frontPoints = isLantern
+    ? generatePanelPoints(W, H, t, Nu, Nh, 'male', 'male', 'male', 'male', kerf)
+    : generatePanelPoints(W, fHeight, t, Nu, Nh, 'female', 'male', topEdgeTypeFront, 'male', kerf);
 
-  if (boxType === 'removable-lid' && lidType === 'sliding') {
+  if (!isLantern && boxType === 'removable-lid' && lidType === 'sliding') {
     // To ensure the finger joints on the left and right edges perfectly align with the side panels (which have height H),
     // we generate the panel at full height H, and then flat-cut/clip it at y = fHeight using a robust polygon clipping algorithm.
     const fullFrontPoints = generatePanelPoints(W, H, t, Nu, Nh, 'female', 'male', 'flat', 'male', kerf);
@@ -556,7 +857,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     }
   }
 
-  if (boxType === 'removable-lid' && lidType === 'hinged') {
+  if (!isLantern && boxType === 'removable-lid' && lidType === 'hinged') {
     // Modify the top edge of the front panel to add the notch so the 17mm lid lip sits within the box perfectly
     const W_lid = W - 2 * t - 1.0;
     const lipWidth = Math.min(40, W_lid - 20);
@@ -589,14 +890,25 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     }
   }
 
-  panels.push({ id: 'front', name: 'Front Panel', width: W, height: fHeight, points: frontPoints });
+  panels.push({
+    id: 'front',
+    name: 'Front Panel',
+    width: W,
+    height: fHeight,
+    points: frontPoints,
+    holes: frontHoles.length > 0 ? frontHoles : undefined
+  });
 
   // 4. Back Panel (W x H)
   let topEdgeTypeBack: EdgeType = boxType === 'open-top' ? 'flat' : 'female';
-  if (boxType === 'removable-lid' && (lidType === 'sliding' || lidType === 'hinged' || lidType === 'drop-in')) {
+  if (isLantern) {
+    topEdgeTypeBack = 'male';
+  } else if (boxType === 'removable-lid' && (lidType === 'sliding' || lidType === 'hinged' || lidType === 'drop-in')) {
     topEdgeTypeBack = 'flat';
   }
-  const backPoints = generatePanelPoints(W, H, t, Nu, Nh, 'female', 'male', topEdgeTypeBack, 'male', kerf);
+  const backPoints = isLantern
+    ? generatePanelPoints(W, H, t, Nu, Nh, 'male', 'male', 'male', 'male', kerf)
+    : generatePanelPoints(W, H, t, Nu, Nh, 'female', 'male', topEdgeTypeBack, 'male', kerf);
   panels.push({
     id: 'back',
     name: 'Back Panel',
@@ -608,10 +920,14 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
   // 5. Left Panel (D x H)
   let topEdgeTypeLeft: EdgeType = boxType === 'open-top' ? 'flat' : 'female';
-  if (boxType === 'removable-lid' && (lidType === 'sliding' || lidType === 'hinged' || lidType === 'drop-in')) {
+  if (isLantern) {
+    topEdgeTypeLeft = 'flat';
+  } else if (boxType === 'removable-lid' && (lidType === 'sliding' || lidType === 'hinged' || lidType === 'drop-in')) {
     topEdgeTypeLeft = 'flat';
   }
-  const leftPoints = generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeLeft, 'female', kerf);
+  const leftPoints = isLantern
+    ? generatePanelPoints(D, H, t, Nv, Nh, 'flat', 'female', 'flat', 'female', kerf)
+    : generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeLeft, 'female', kerf);
   panels.push({
     id: 'left',
     name: 'Left Panel',
@@ -623,10 +939,14 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
 
   // 6. Right Panel (D x H)
   let topEdgeTypeRight: EdgeType = boxType === 'open-top' ? 'flat' : 'female';
-  if (boxType === 'removable-lid' && (lidType === 'sliding' || lidType === 'hinged' || lidType === 'drop-in')) {
+  if (isLantern) {
+    topEdgeTypeRight = 'flat';
+  } else if (boxType === 'removable-lid' && (lidType === 'sliding' || lidType === 'hinged' || lidType === 'drop-in')) {
     topEdgeTypeRight = 'flat';
   }
-  const rightPoints = generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeRight, 'female', kerf);
+  const rightPoints = isLantern
+    ? generatePanelPoints(D, H, t, Nv, Nh, 'flat', 'female', 'flat', 'female', kerf)
+    : generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeRight, 'female', kerf);
   panels.push({
     id: 'right',
     name: 'Right Panel',

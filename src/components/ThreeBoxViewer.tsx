@@ -188,11 +188,19 @@ export default function ThreeBoxViewer({
       const isLidHinged = params.boxType === 'removable-lid' && params.lidType === 'hinged';
 
       if (panel.id === 'bottom') {
-        basePos.set(0, -H / 2 + t / 2, 0);
+        if (params.isLantern) {
+          basePos.set(0, -H / 2 - t / 2, 0);
+        } else {
+          basePos.set(0, -H / 2 + t / 2, 0);
+        }
         rotation.set(Math.PI / 2, 0, 0);
         normal.set(0, -1, 0);
       } else if (panel.id === 'top') {
-        if (isLidSliding) {
+        if (params.isLantern) {
+          basePos.set(0, H / 2 + t / 2, 0);
+          rotation.set(-Math.PI / 2, 0, 0);
+          normal.set(0, 1, 0);
+        } else if (isLidSliding) {
           // Slide groove sits flush with the top of the box. Lid is recessed under the top rail: top of lid is H/2 - t - 0.2, center is H/2 - 1.5*t - 0.2.
           basePos.set(0, H / 2 - 1.5 * t - 0.2, t / 2 + 7.5);
           rotation.set(-Math.PI / 2, 0, 0);
@@ -434,8 +442,10 @@ export default function ThreeBoxViewer({
       panelsGroupRef.current = panelsGroup;
 
       // GRID HELPER & FLOOR SHADOW PLANE (Added directly to pivot for unified Fusion rotation)
+      const lowestY = params.isLantern ? (-params.height / 2 - params.thickness) : (-params.height / 2);
+
       const gridHelper = new THREE.GridHelper(maxDim * 5, 24, '#3b82f6', '#cbd5e1');
-      gridHelper.position.y = -params.height / 2;
+      gridHelper.position.y = lowestY;
       pivot.add(gridHelper);
 
       // FLOOR PLANE FOR SHADOWS (Added directly to pivot for unified rotation)
@@ -443,14 +453,14 @@ export default function ThreeBoxViewer({
       const shadowMat = new THREE.ShadowMaterial({ opacity: 0.15 });
       const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
       shadowMesh.rotation.x = -Math.PI / 2;
-      shadowMesh.position.y = -params.height / 2 - 0.1;
+      shadowMesh.position.y = lowestY - 0.1;
       shadowMesh.receiveShadow = true;
       pivot.add(shadowMesh);
 
       // ORIGIN AXIS ARROWS (Autodesk Fusion style)
       const axesHelper = new THREE.AxesHelper(maxDim * 0.4);
       // Position it at the corner of the box base boundary
-      axesHelper.position.set(-params.width / 2 - 15, -params.height / 2, -params.depth / 2 - 15);
+      axesHelper.position.set(-params.width / 2 - 15, lowestY, -params.depth / 2 - 15);
       // In THREE, X = Red, Y = Green, Z = Blue. We can customize if desired, but default is standard.
       pivot.add(axesHelper);
 
@@ -469,6 +479,21 @@ export default function ThreeBoxViewer({
       const dirLight2 = new THREE.DirectionalLight('#ffffff', 0.25);
       dirLight2.position.set(-maxDim * 2, maxDim, -maxDim * 2);
       scene.add(dirLight2);
+
+      // Lantern Glow Point Light (Inside the center of the lantern!)
+      if (params.isLantern) {
+        const lanternLight = new THREE.PointLight('#ff9933', 2.5, maxDim * 2.5);
+        lanternLight.position.set(0, 0, 0);
+        lanternLight.castShadow = false;
+        scene.add(lanternLight);
+        
+        // Glowing physical light source
+        const bulbGeom = new THREE.SphereGeometry(Math.max(4, Math.min(params.width, params.depth) * 0.08), 16, 16);
+        const bulbMat = new THREE.MeshBasicMaterial({ color: '#ffcc66' });
+        const bulb = new THREE.Mesh(bulbGeom, bulbMat);
+        bulb.position.set(0, 0, 0);
+        scene.add(bulb);
+      }
 
       // Initial box construct
       rebuild3DBox();
@@ -544,7 +569,7 @@ export default function ThreeBoxViewer({
         renderer.dispose();
       }
     };
-  }, [params.width, params.height, params.depth, params.thickness, materialColor, materialType, wireframeMode]);
+  }, [params.width, params.height, params.depth, params.thickness, materialColor, materialType, wireframeMode, params.isLantern]);
 
   // Rebuild geometry when panels change
   useEffect(() => {
