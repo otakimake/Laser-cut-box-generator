@@ -609,7 +609,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     }
 
     const segD = D / Nv;
-    for (let i = 0; i < Nv; i += 2) {
+    for (let i = 1; i < Nv; i += 2) {
       const v1 = i * segD;
       const v2 = (i + 1) * segD;
       
@@ -689,7 +689,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
       }
 
       const segD = D / Nv;
-      for (let i = 0; i < Nv; i += 2) {
+      for (let i = 1; i < Nv; i += 2) {
         const v1 = i * segD;
         const v2 = (i + 1) * segD;
         
@@ -971,7 +971,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     topEdgeTypeLeft = 'flat';
   }
   const leftPoints = isLantern
-    ? generatePanelPoints(D, H, t, Nv, Nh, 'male', 'female', 'male', 'female', kerf)
+    ? generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', 'female', 'female', kerf)
     : generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeLeft, 'female', kerf);
   panels.push({
     id: 'left',
@@ -990,7 +990,7 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
     topEdgeTypeRight = 'flat';
   }
   const rightPoints = isLantern
-    ? generatePanelPoints(D, H, t, Nv, Nh, 'male', 'female', 'male', 'female', kerf)
+    ? generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', 'female', 'female', kerf)
     : generatePanelPoints(D, H, t, Nv, Nh, 'female', 'female', topEdgeTypeRight, 'female', kerf);
   panels.push({
     id: 'right',
