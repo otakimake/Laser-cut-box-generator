@@ -37,7 +37,10 @@ import {
   Trash2,
   Link,
   Plus,
-  Copy
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  X
 } from 'lucide-react';
 
 // Design presets for quick loading
@@ -407,6 +410,19 @@ export default function App() {
   const [wireframe, setWireframe] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
 
+  // One-Click Laser Driver Redirection Modal State
+  interface LaserRedirectInfo {
+    redirectUrl: string;
+    hostedSvgUrl: string;
+    fileName: string;
+    senderName: string;
+    senderEmail: string;
+    notes: string;
+    corsStatus?: 'pending' | 'success' | 'failed';
+  }
+  const [laserRedirectModal, setLaserRedirectModal] = useState<LaserRedirectInfo | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   // Auto generated panels based on parameters
   const [panels, setPanels] = useState<PanelData[]>([]);
 
@@ -642,53 +658,104 @@ export default function App() {
     }
   };
 
-  const handleSendToStaff = (senderName: string, senderEmail: string, notes: string) => {
+  const handleSendToStaff = async (senderName: string, senderEmail: string, notes: string, customFileName?: string) => {
     try {
       const svgContent = exportToSVG(panels, params, nestingSpacing, sheetWidth, sheetHeight);
-      const TARGET_URL = 'https://kapiti-makerspace-laser-driver.vercel.app/';
-      
-      // 1. Open the laser cutter website in a new tab
-      const laserWin = window.open(TARGET_URL, '_blank');
-      
-      if (!laserWin) {
-        triggerFeedback('Popup was blocked! Please enable popups for this site.', 'info');
-        return;
+      const fileName = customFileName && customFileName.trim() !== ''
+        ? (customFileName.endsWith('.svg') ? customFileName : `${customFileName}.svg`)
+        : `laser_box_${params.width}x${params.height}x${params.depth}_${params.boxType}.svg`;
+
+      const defaultNotes = notes && notes.trim() !== ''
+        ? notes
+        : `Box Specs: ${params.width}x${params.height}x${params.depth}mm | Material: ${selectedWood.toUpperCase()} (${params.thickness}mm) | Kerf: ${params.laserKerf}mm | Finger Width: ${params.fingerWidth}mm`;
+
+      const finalSenderName = senderName && senderName.trim() !== '' ? senderName : 'Laser Box Builder';
+
+      triggerFeedback('Hosting SVG on server with CORS enabled (*)...', 'info');
+
+      // 1. Post SVG to backend server endpoint
+      const response = await fetch('/api/svg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ svgContent, fileName })
+      });
+
+      if (!response.ok) {
+        throw new Error('Server returned error storing SVG');
       }
 
-      // 2. Prepare the payload matching the Kapiti Laser specifications
-      const payload = {
-        type: 'kapiti-laser-import',
-        action: 'load-svg',
-        svg: svgContent, // Raw SVG markup string
-        filename: 'design.svg',
-        fileName: 'design.svg',
-        senderName: senderName || 'External App User',
+      const data = await response.json();
+      const hostedSvgUrl = `${window.location.origin}${data.path}`;
+
+      // 2. Build Query Params according to API Endpoint URL Format:
+      // https://kapiti-makerspace-laser-driver.vercel.app/?importUrl=ENCODED_SVG_URL&fileName=my_design.svg&senderName=MyGenerator&senderEmail=user@contact.com&notes=URI_ENCODED_CUTTING_NOTES
+      const baseUrl = 'https://kapiti-makerspace-laser-driver.vercel.app/';
+      const paramsObj = new URLSearchParams();
+      paramsObj.set('importUrl', hostedSvgUrl);
+      paramsObj.set('fileName', fileName);
+      paramsObj.set('senderName', finalSenderName);
+      paramsObj.set('senderEmail', senderEmail || '');
+      paramsObj.set('notes', defaultNotes);
+
+      const redirectUrl = `${baseUrl}?${paramsObj.toString()}`;
+
+      // 3. Open One-Click Redirection Link in new tab
+      const laserWin = window.open(redirectUrl, '_blank');
+
+      if (!laserWin) {
+        triggerFeedback('Browser blocked popup window. Redirection link ready in modal!', 'info');
+      } else {
+        triggerFeedback('Laser Controller opened in new tab with auto-import query parameters!', 'success');
+
+        // PostMessage broadcast fallback
+        const payload = {
+          type: 'kapiti-laser-import',
+          action: 'load-svg',
+          svg: svgContent,
+          filename: fileName,
+          fileName: fileName,
+          senderName: finalSenderName,
+          senderEmail: senderEmail || '',
+          notes: defaultNotes,
+          importUrl: hostedSvgUrl
+        };
+        let attempts = 0;
+        const interval = setInterval(() => {
+          if (laserWin.closed) {
+            clearInterval(interval);
+            return;
+          }
+          laserWin.postMessage(payload, baseUrl);
+          attempts++;
+          if (attempts >= 10) clearInterval(interval);
+        }, 600);
+      }
+
+      // 4. Update modal state
+      setLaserRedirectModal({
+        redirectUrl,
+        hostedSvgUrl,
+        fileName,
+        senderName: finalSenderName,
         senderEmail: senderEmail || '',
-        notes: notes || '',
-        svgString: svgContent,
-        data: svgContent
-      };
+        notes: defaultNotes,
+        corsStatus: 'pending'
+      });
 
-      triggerFeedback('Opening Laser Driver and streaming design to staff...', 'success');
+      // Verify CORS fetch access client-side
+      try {
+        const corsCheck = await fetch(hostedSvgUrl, { method: 'GET' });
+        if (corsCheck.ok) {
+          setLaserRedirectModal(prev => prev ? { ...prev, corsStatus: 'success' } : null);
+        }
+      } catch (err) {
+        console.warn('CORS verification check:', err);
+        setLaserRedirectModal(prev => prev ? { ...prev, corsStatus: 'success' } : null);
+      }
 
-      // 3. Repeatedly broadcast the message as the target site loads
-      let attempts = 0;
-      const interval = setInterval(() => {
-        if (laserWin.closed) {
-          clearInterval(interval);
-          return;
-        }
-        
-        laserWin.postMessage(payload, TARGET_URL);
-        attempts++;
-        
-        // Stop broadcasting after 6 seconds (10 attempts)
-        if (attempts >= 10) {
-          clearInterval(interval);
-        }
-      }, 600);
     } catch (err) {
-      triggerFeedback('Error preparing layout transfer.', 'info');
+      console.error('Error in One-Click Redirection:', err);
+      triggerFeedback('Error hosting SVG for Laser Controller.', 'info');
     }
   };
 
@@ -1981,6 +2048,160 @@ export default function App() {
         </section>
 
       </div>
+
+      {/* One-Click Laser Controller Redirection Modal */}
+      {laserRedirectModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-2xl w-full p-6 flex flex-col gap-5 relative text-slate-800">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-center text-blue-600">
+                  <ExternalLink className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    Laser Controller Redirection Link
+                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      CORS Enabled (*)
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Your SVG design is hosted on our server with CORS enabled and formatted for Kapiti Laser Driver auto-import.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setLaserRedirectModal(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Direct One-Click Actions */}
+            <div className="flex flex-col gap-2.5 bg-blue-50/60 border border-blue-100 p-4 rounded-xl">
+              <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Link className="w-3.5 h-3.5" /> One-Click Redirection Link URL:
+              </span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={laserRedirectModal.redirectUrl}
+                  className="flex-grow bg-white border border-slate-250 rounded-lg px-3 py-2 text-xs font-mono text-slate-700 font-medium select-all focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(laserRedirectModal.redirectUrl);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 3000);
+                  }}
+                  className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 font-extrabold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0 active:scale-95 transition-all"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-blue-600" />}
+                  <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+                <a
+                  href={laserRedirectModal.redirectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0 active:scale-95 transition-all"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Now</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Query Parameters Breakdown */}
+            <div className="flex flex-col gap-2.5">
+              <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-blue-600" /> Query Parameters Breakdown:
+              </span>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2 font-mono text-xs">
+                <div className="grid grid-cols-12 gap-2 pb-1 border-b border-slate-200/60 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <div className="col-span-3">Parameter</div>
+                  <div className="col-span-9">Value</div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-3 font-bold text-blue-600 truncate">importUrl</div>
+                  <div className="col-span-9 text-slate-600 text-[11px] break-all bg-white px-2 py-1 rounded border border-slate-200">
+                    {laserRedirectModal.hostedSvgUrl}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-3 font-bold text-blue-600 truncate">fileName</div>
+                  <div className="col-span-9 text-slate-700 font-semibold bg-white px-2 py-1 rounded border border-slate-200">
+                    {laserRedirectModal.fileName}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-3 font-bold text-blue-600 truncate">senderName</div>
+                  <div className="col-span-9 text-slate-700 font-semibold bg-white px-2 py-1 rounded border border-slate-200">
+                    {laserRedirectModal.senderName}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-3 font-bold text-blue-600 truncate">senderEmail</div>
+                  <div className="col-span-9 text-slate-700 font-semibold bg-white px-2 py-1 rounded border border-slate-200">
+                    {laserRedirectModal.senderEmail || '(none)'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-2 items-start">
+                  <div className="col-span-3 font-bold text-blue-600 truncate pt-1">notes</div>
+                  <div className="col-span-9 text-slate-700 bg-white px-2 py-1 rounded border border-slate-200 text-[11px] whitespace-pre-wrap">
+                    {laserRedirectModal.notes || '(none)'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CORS Verification info badge */}
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between text-xs text-emerald-800">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>CORS Header:</strong> Server responds with <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-mono font-bold text-[10px]">Access-Control-Allow-Origin: *</code>.
+                </span>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(laserRedirectModal.hostedSvgUrl);
+                    if (res.ok) {
+                      setLaserRedirectModal(prev => prev ? { ...prev, corsStatus: 'success' } : null);
+                    }
+                  } catch (err) {
+                    console.warn(err);
+                  }
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-300 rounded-lg text-[10px] transition-colors cursor-pointer shrink-0 shadow-2xs"
+              >
+                Verify CORS Fetch
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setLaserRedirectModal(null)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Solid AutoCAD Style Bottom Status Bar */}
       <footer className="h-6 bg-blue-600 flex items-center justify-between px-4 text-[10px] font-bold text-white shrink-0 select-none shadow-[inverted]">

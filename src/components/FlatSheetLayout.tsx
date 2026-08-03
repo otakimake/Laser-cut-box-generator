@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { PanelData, computeNesting, getRotatedPointsAndHoles } from '../lib/boxGeometry';
-import { Layers, RotateCcw, Sliders, LayoutGrid, Download, Scissors, Check, Eye, Send, User, Mail, MessageSquare } from 'lucide-react';
+import { Layers, RotateCcw, Sliders, LayoutGrid, Download, Scissors, Check, Eye, Send, User, Mail, MessageSquare, FileCode, ExternalLink, Link } from 'lucide-react';
 
 interface FlatSheetLayoutProps {
   panels: PanelData[];
@@ -16,7 +16,7 @@ interface FlatSheetLayoutProps {
   onSheetHeightChange: (h: number) => void;
   onExportSVG?: () => void;
   onExportDXF?: () => void;
-  onSendToStaff?: (senderName: string, senderEmail: string, notes: string) => void;
+  onSendToStaff?: (senderName: string, senderEmail: string, notes: string, fileName?: string) => void;
 }
 
 const PRESETS = [
@@ -58,10 +58,11 @@ export default function FlatSheetLayout({
   const [widthInput, setWidthInput] = useState<string>(sheetWidth.toString());
   const [heightInput, setHeightInput] = useState<string>(sheetHeight.toString());
 
-  // Sender details for the Laser Driver postMessage upload
+  // Sender details for the Laser Driver postMessage upload & One-Click Redirection
   const [senderName, setSenderName] = useState(() => localStorage.getItem('kapiti_laser_senderName') || '');
   const [senderEmail, setSenderEmail] = useState(() => localStorage.getItem('kapiti_laser_senderEmail') || '');
   const [notes, setNotes] = useState(() => localStorage.getItem('kapiti_laser_notes') || '');
+  const [fileName, setFileName] = useState(() => localStorage.getItem('kapiti_laser_fileName') || 'my_design.svg');
 
   // Keep local input values in sync if props are changed by presets / external minimum resets
   useEffect(() => {
@@ -305,11 +306,16 @@ export default function FlatSheetLayout({
             </div>
           </div>
 
-          {/* Send to Staff Section */}
+          {/* One-Click Redirection to Laser Driver */}
           <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col gap-3">
-            <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
-              <Send className="w-3.5 h-3.5" />
-              <span>Send Layout to Staff</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
+                <Send className="w-3.5 h-3.5" />
+                <span>One-Click Laser Driver Redirection</span>
+              </div>
+              <span className="bg-emerald-50 text-emerald-700 text-[9px] font-mono px-1.5 py-0.5 rounded border border-emerald-200">
+                CORS *
+              </span>
             </div>
             
             <div className="flex flex-col gap-2.5">
@@ -317,7 +323,7 @@ export default function FlatSheetLayout({
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
                   <User className="w-3 h-3 text-slate-400" />
-                  Name
+                  Sender Name
                 </label>
                 <input
                   type="text"
@@ -326,7 +332,7 @@ export default function FlatSheetLayout({
                     setSenderName(e.target.value);
                     localStorage.setItem('kapiti_laser_senderName', e.target.value);
                   }}
-                  placeholder="Your Name"
+                  placeholder="Your Name / Generator"
                   className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none"
                 />
               </div>
@@ -335,7 +341,7 @@ export default function FlatSheetLayout({
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
                   <Mail className="w-3 h-3 text-slate-400" />
-                  Email
+                  Sender Email
                 </label>
                 <input
                   type="email"
@@ -344,8 +350,26 @@ export default function FlatSheetLayout({
                     setSenderEmail(e.target.value);
                     localStorage.setItem('kapiti_laser_senderEmail', e.target.value);
                   }}
-                  placeholder="your.email@example.com"
+                  placeholder="user@contact.com"
                   className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none"
+                />
+              </div>
+
+              {/* File Name Field */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
+                  <FileCode className="w-3 h-3 text-slate-400" />
+                  File Name (.svg)
+                </label>
+                <input
+                  type="text"
+                  value={fileName}
+                  onChange={(e) => {
+                    setFileName(e.target.value);
+                    localStorage.setItem('kapiti_laser_fileName', e.target.value);
+                  }}
+                  placeholder="my_design.svg"
+                  className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none font-mono"
                 />
               </div>
 
@@ -353,7 +377,7 @@ export default function FlatSheetLayout({
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-slate-500 font-extrabold uppercase flex items-center gap-1">
                   <MessageSquare className="w-3 h-3 text-slate-400" />
-                  Notes / Instructions
+                  Cutting Notes
                 </label>
                 <textarea
                   value={notes}
@@ -361,7 +385,7 @@ export default function FlatSheetLayout({
                     setNotes(e.target.value);
                     localStorage.setItem('kapiti_laser_notes', e.target.value);
                   }}
-                  placeholder="Material, thickness, specs..."
+                  placeholder="Material, kerf, special instructions..."
                   rows={2}
                   className="w-full bg-white border border-slate-200 focus:border-blue-600 text-slate-800 text-xs rounded py-1.5 px-2.5 focus:outline-none resize-none"
                 />
@@ -370,20 +394,20 @@ export default function FlatSheetLayout({
               <button
                 onClick={() => {
                   if (onSendToStaff) {
-                    onSendToStaff(senderName, senderEmail, notes);
+                    onSendToStaff(senderName, senderEmail, notes, fileName);
                   }
                 }}
                 disabled={!senderName || !senderEmail}
-                className="mt-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-450 text-white font-extrabold py-2 px-3 rounded-lg text-xs shadow-sm transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
-                title="Send SVG design directly to Laser Driver website"
+                className="mt-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-extrabold py-2 px-3 rounded-lg text-xs shadow-sm transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
+                title="Generate CORS hosted SVG link & redirect with query params to Laser Controller"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Send to Staff</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open in Laser Controller</span>
               </button>
             </div>
             
             <p className="text-[9px] text-slate-500 leading-normal font-medium select-none">
-              This opens the Laser Driver in a new tab and securely streams this design with your details.
+              Hosts your SVG with CORS enabled (<code className="font-mono font-bold">Access-Control-Allow-Origin: *</code>) and triggers one-click import redirection with encoded query params.
             </p>
           </div>
 
