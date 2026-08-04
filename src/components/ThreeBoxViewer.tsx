@@ -232,7 +232,7 @@ export default function ThreeBoxViewer({
       } else if (panel.id === 'left_bottom_guide') {
         // Horizontal bottom guide strip inside Left wall
         basePos.set(-W / 2 + t + 7.5, H / 2 - 2.5 * t - 0.4, 0);
-        rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
+        rotation.set(-Math.PI / 2, 0, Math.PI / 2);
         normal.set(-1, 0, 0); // Explodes with the left wall outwards
       } else if (panel.id === 'right') {
         basePos.set(W / 2 - t / 2, 0, 0);
