@@ -903,13 +903,13 @@ export function generateBoxPanels(params: BoxParams): PanelData[] {
   }
 
   if (!isLantern && boxType === 'removable-lid' && lidType === 'hinged') {
-    // Modify the top edge of the front panel to add the notch so the 17mm lid lip sits within the box perfectly
+    // Modify the top edge of the front panel to add a precision notch so the lid lip sits perfectly within the cutout
     const W_lid = W - 2 * t - 1.0;
     const lipWidth = Math.min(40, W_lid - 20);
-    const notchWidth = lipWidth + 6; // 3mm clearance on each side
+    const notchWidth = lipWidth + 1.0; // 0.5mm precision clearance on left & right
     const notchStart = (W - notchWidth) / 2;
     const notchEnd = notchStart + notchWidth;
-    const notchDepth = 12.5 + t / 2; // 12.5mm + t/2 depth for comfortable clearance under the 17mm lip
+    const notchDepth = 6.5 + t / 2; // Exact depth so bottom of cutout sits ~0.5mm below lid bottom when closed
 
     const newPoints: Point2D[] = [];
     let modified = false;

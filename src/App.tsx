@@ -671,47 +671,60 @@ export default function App() {
 
       const finalSenderName = senderName && senderName.trim() !== '' ? senderName : 'Laser Box Builder';
 
-      triggerFeedback('Hosting SVG on server with CORS enabled (*)...', 'info');
+      // Save user inputs in localStorage
+      localStorage.setItem('user_name', finalSenderName);
+      localStorage.setItem('user_email', senderEmail || '');
+      localStorage.setItem('user_notes', defaultNotes);
+      localStorage.setItem('kapiti_laser_senderName', finalSenderName);
+      localStorage.setItem('kapiti_laser_senderEmail', senderEmail || '');
+      localStorage.setItem('kapiti_laser_notes', defaultNotes);
+      localStorage.setItem('kapiti_laser_fileName', fileName);
 
-      // 1. Post SVG to backend server endpoint
-      const response = await fetch('/api/svg', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ svgContent, fileName })
-      });
+      triggerFeedback('Preparing design for Laser Driver...', 'info');
 
-      if (!response.ok) {
-        throw new Error('Server returned error storing SVG');
+      // 1. Post SVG to backend server endpoint for CORS URL fallback
+      let hostedSvgUrl = '';
+      try {
+        const response = await fetch('/api/svg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ svgContent, fileName })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          hostedSvgUrl = `${window.location.origin}${data.path}`;
+        }
+      } catch (e) {
+        console.warn('CORS server storage endpoint bypassed, using direct postMessage stream', e);
       }
 
-      const data = await response.json();
-      const hostedSvgUrl = `${window.location.origin}${data.path}`;
-
-      // 2. Build Query Params according to API Endpoint URL Format:
-      // https://kapiti-makerspace-laser-driver.vercel.app/?importUrl=ENCODED_SVG_URL&fileName=my_design.svg&senderName=MyGenerator&senderEmail=user@contact.com&notes=URI_ENCODED_CUTTING_NOTES
-      const baseUrl = 'https://kapiti-makerspace-laser-driver.vercel.app/';
+      const targetUrl = 'https://kapiti-makerspace-laser-driver.vercel.app/';
       const paramsObj = new URLSearchParams();
-      paramsObj.set('importUrl', hostedSvgUrl);
+      if (hostedSvgUrl) paramsObj.set('importUrl', hostedSvgUrl);
       paramsObj.set('fileName', fileName);
+      paramsObj.set('filename', fileName);
       paramsObj.set('senderName', finalSenderName);
       paramsObj.set('senderEmail', senderEmail || '');
       paramsObj.set('notes', defaultNotes);
 
-      const redirectUrl = `${baseUrl}?${paramsObj.toString()}`;
+      const redirectUrl = `${targetUrl}?${paramsObj.toString()}`;
 
-      // 3. Open One-Click Redirection Link in new tab
-      const laserWin = window.open(redirectUrl, '_blank');
+      // 2. Open target web application in a new tab via window.open()
+      const targetWindow = window.open(redirectUrl, '_blank');
 
-      if (!laserWin) {
-        triggerFeedback('Browser blocked popup window. Redirection link ready in modal!', 'info');
+      if (!targetWindow) {
+        alert('Popup blocked. Please allow popups for this site.');
+        triggerFeedback('Popup blocked. Please allow popups for this site.', 'info');
       } else {
-        triggerFeedback('Laser Controller opened in new tab with auto-import query parameters!', 'success');
+        triggerFeedback('Laser Controller opened! Streaming vector payload...', 'success');
 
-        // PostMessage broadcast fallback
+        // 3. Construct cross-window payload with SVG vector string
         const payload = {
           type: 'kapiti-laser-import',
           action: 'load-svg',
           svg: svgContent,
+          svgString: svgContent,
           filename: fileName,
           fileName: fileName,
           senderName: finalSenderName,
@@ -719,19 +732,25 @@ export default function App() {
           notes: defaultNotes,
           importUrl: hostedSvgUrl
         };
+
+        // 4. Post message repeatedly every 600ms while target tab boots up (10 attempts / 6s)
         let attempts = 0;
+        const maxAttempts = 10;
         const interval = setInterval(() => {
-          if (laserWin.closed) {
+          if (targetWindow.closed) {
             clearInterval(interval);
             return;
           }
-          laserWin.postMessage(payload, baseUrl);
+          targetWindow.postMessage(payload, 'https://kapiti-makerspace-laser-driver.vercel.app');
           attempts++;
-          if (attempts >= 10) clearInterval(interval);
+
+          if (attempts >= maxAttempts) {
+            clearInterval(interval);
+          }
         }, 600);
       }
 
-      // 4. Update modal state
+      // 5. Update modal state for reference
       setLaserRedirectModal({
         redirectUrl,
         hostedSvgUrl,

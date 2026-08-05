@@ -59,9 +59,9 @@ export default function FlatSheetLayout({
   const [heightInput, setHeightInput] = useState<string>(sheetHeight.toString());
 
   // Sender details for the Laser Driver postMessage upload & One-Click Redirection
-  const [senderName, setSenderName] = useState(() => localStorage.getItem('kapiti_laser_senderName') || '');
-  const [senderEmail, setSenderEmail] = useState(() => localStorage.getItem('kapiti_laser_senderEmail') || '');
-  const [notes, setNotes] = useState(() => localStorage.getItem('kapiti_laser_notes') || '');
+  const [senderName, setSenderName] = useState(() => localStorage.getItem('user_name') || localStorage.getItem('kapiti_laser_senderName') || '');
+  const [senderEmail, setSenderEmail] = useState(() => localStorage.getItem('user_email') || localStorage.getItem('kapiti_laser_senderEmail') || '');
+  const [notes, setNotes] = useState(() => localStorage.getItem('user_notes') || localStorage.getItem('kapiti_laser_notes') || '');
   const [fileName, setFileName] = useState(() => localStorage.getItem('kapiti_laser_fileName') || 'my_design.svg');
 
   // Keep local input values in sync if props are changed by presets / external minimum resets
@@ -330,6 +330,7 @@ export default function FlatSheetLayout({
                   value={senderName}
                   onChange={(e) => {
                     setSenderName(e.target.value);
+                    localStorage.setItem('user_name', e.target.value);
                     localStorage.setItem('kapiti_laser_senderName', e.target.value);
                   }}
                   placeholder="Your Name / Generator"
@@ -348,6 +349,7 @@ export default function FlatSheetLayout({
                   value={senderEmail}
                   onChange={(e) => {
                     setSenderEmail(e.target.value);
+                    localStorage.setItem('user_email', e.target.value);
                     localStorage.setItem('kapiti_laser_senderEmail', e.target.value);
                   }}
                   placeholder="user@contact.com"
@@ -383,6 +385,7 @@ export default function FlatSheetLayout({
                   value={notes}
                   onChange={(e) => {
                     setNotes(e.target.value);
+                    localStorage.setItem('user_notes', e.target.value);
                     localStorage.setItem('kapiti_laser_notes', e.target.value);
                   }}
                   placeholder="Material, kerf, special instructions..."
