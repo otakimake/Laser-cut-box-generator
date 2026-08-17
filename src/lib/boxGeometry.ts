@@ -59,6 +59,27 @@ export interface PanelData {
   engravePaths?: Point2D[][];
 }
 
+export type ShapeCutoutType = 'rectangle' | 'circle' | 'slot' | 'polygon' | 'star';
+
+export interface ShapeCutoutConfig {
+  id: string;
+  name: string;
+  shapeType: ShapeCutoutType;
+  panelIds: string[];
+  panelId?: string;
+  width: number;       // Width in mm (or primary diameter)
+  height: number;      // Height in mm
+  cornerRadius: number;// Corner radius in mm (0 for sharp corners, up to min(W,H)/2 for pill)
+  offsetX: number;     // Offset X from panel center in mm
+  offsetY: number;     // Offset Y from panel center in mm
+  rotation: number;    // Rotation in degrees (-360 to +360)
+  cutType: 'cut' | 'engrave'; // 'cut' = through hole cutout, 'engrave' = surface vector score
+  polygonSides?: number; // 3 to 12 sides for regular polygon
+  starPoints?: number;   // 4 to 12 points for star
+  starInnerRatio?: number; // Inner radius ratio (0.2 to 0.8)
+  enabled: boolean;
+}
+
 /**
  * Generates the 2D polygon vertices of a rectangular panel including finger joints.
  * Local coordinate space: x in [0, A], y in [0, B]
@@ -244,6 +265,184 @@ export function createRectHole(x1: number, y1: number, x2: number, y2: number): 
     { x: x2, y: y2 },
     { x: x1, y: y2 }
   ];
+}
+
+/**
+ * Generates a high-precision rounded rectangle (or sharp rectangle if radius <= 0).
+ * Parameters:
+ * - cx, cy: Center coordinates in 2D panel space
+ * - w, h: Outer width and height in mm
+ * - r: Corner radius in mm (clamped between 0 and min(w, h)/2)
+ * - rotationDeg: Clockwise / counterclockwise rotation in degrees
+ * - stepsPerCorner: Number of arc vertices per rounded corner (default 8)
+ */
+export function createRoundedRectPoints(
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  r: number = 0,
+  rotationDeg: number = 0,
+  stepsPerCorner: number = 8
+): Point2D[] {
+  const safeW = Math.max(0.5, w);
+  const safeH = Math.max(0.5, h);
+  const halfW = safeW / 2;
+  const halfH = safeH / 2;
+  const maxR = Math.min(halfW, halfH);
+  const radius = Math.max(0, Math.min(maxR, r));
+
+  const localPts: Point2D[] = [];
+
+  if (radius <= 0.05) {
+    // Sharp rectangle: top-left, top-right, bottom-right, bottom-left
+    localPts.push({ x: -halfW, y: -halfH });
+    localPts.push({ x: halfW, y: -halfH });
+    localPts.push({ x: halfW, y: halfH });
+    localPts.push({ x: -halfW, y: halfH });
+  } else {
+    // 4 rounded corners in clockwise order starting from top-right:
+    // Corner 1: Top-Right (center: halfW - radius, -halfH + radius), arc from -PI/2 to 0
+    // Corner 2: Bottom-Right (center: halfW - radius, halfH - radius), arc from 0 to PI/2
+    // Corner 3: Bottom-Left (center: -halfW + radius, halfH - radius), arc from PI/2 to PI
+    // Corner 4: Top-Left (center: -halfW + radius, -halfH + radius), arc from PI to 3*PI/2
+
+    const corners = [
+      { ccx: halfW - radius, ccy: -halfH + radius, startAngle: -Math.PI / 2, endAngle: 0 },
+      { ccx: halfW - radius, ccy: halfH - radius, startAngle: 0, endAngle: Math.PI / 2 },
+      { ccx: -halfW + radius, ccy: halfH - radius, startAngle: Math.PI / 2, endAngle: Math.PI },
+      { ccx: -halfW + radius, ccy: -halfH + radius, startAngle: Math.PI, endAngle: (3 * Math.PI) / 2 }
+    ];
+
+    corners.forEach((c) => {
+      for (let i = 0; i <= stepsPerCorner; i++) {
+        const theta = c.startAngle + (i / stepsPerCorner) * (c.endAngle - c.startAngle);
+        localPts.push({
+          x: c.ccx + Math.cos(theta) * radius,
+          y: c.ccy + Math.sin(theta) * radius
+        });
+      }
+    });
+  }
+
+  // Rotate & translate to (cx, cy)
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cosA = Math.cos(rad);
+  const sinA = Math.sin(rad);
+
+  return localPts.map((p) => ({
+    x: cx + p.x * cosA - p.y * sinA,
+    y: cy + p.x * sinA + p.y * cosA
+  }));
+}
+
+/**
+ * Generates an ellipse or circle loop
+ */
+export function createEllipsePoints(
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  rotationDeg: number = 0,
+  steps: number = 32
+): Point2D[] {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cosA = Math.cos(rad);
+  const sinA = Math.sin(rad);
+  const pts: Point2D[] = [];
+  for (let i = 0; i < steps; i++) {
+    const theta = (i / steps) * Math.PI * 2;
+    const lx = Math.cos(theta) * rx;
+    const ly = Math.sin(theta) * ry;
+    pts.push({
+      x: cx + lx * cosA - ly * sinA,
+      y: cy + lx * sinA + ly * cosA
+    });
+  }
+  return pts;
+}
+
+/**
+ * Generates a regular polygon (e.g. triangle, hexagon, octagon)
+ */
+export function createRegularPolygonPoints(
+  cx: number,
+  cy: number,
+  radius: number,
+  sides: number = 6,
+  rotationDeg: number = 0
+): Point2D[] {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const pts: Point2D[] = [];
+  const count = Math.max(3, sides);
+  for (let i = 0; i < count; i++) {
+    const theta = (i / count) * Math.PI * 2 - Math.PI / 2 + rad;
+    pts.push({
+      x: cx + Math.cos(theta) * radius,
+      y: cy + Math.sin(theta) * radius
+    });
+  }
+  return pts;
+}
+
+/**
+ * Computes 2D boundary points for any configured shape cutout on a panel
+ */
+export function generateShapeCutoutPoints(
+  shape: ShapeCutoutConfig,
+  panelWidth: number,
+  panelHeight: number
+): Point2D[] {
+  const cx = panelWidth / 2 + shape.offsetX;
+  const cy = panelHeight / 2 + shape.offsetY;
+
+  switch (shape.shapeType) {
+    case 'circle': {
+      const rx = shape.width / 2;
+      const ry = shape.height / 2;
+      return createEllipsePoints(cx, cy, rx, ry, shape.rotation, 36);
+    }
+    case 'slot': {
+      // Capsule / Pill shape: radius is half of minimum dimension
+      const pillRadius = Math.min(shape.width, shape.height) / 2;
+      return createRoundedRectPoints(cx, cy, shape.width, shape.height, pillRadius, shape.rotation, 10);
+    }
+    case 'polygon': {
+      const polyRadius = Math.min(shape.width, shape.height) / 2;
+      return createRegularPolygonPoints(cx, cy, polyRadius, shape.polygonSides || 6, shape.rotation);
+    }
+    case 'star': {
+      const outerR = Math.min(shape.width, shape.height) / 2;
+      const innerR = outerR * (shape.starInnerRatio || 0.45);
+      const pts = createStarPoints(cx, cy, outerR, innerR, shape.starPoints || 5);
+      if (shape.rotation !== 0) {
+        const rad = (shape.rotation * Math.PI) / 180;
+        const cosA = Math.cos(rad);
+        const sinA = Math.sin(rad);
+        return pts.map((p) => {
+          const dx = p.x - cx;
+          const dy = p.y - cy;
+          return {
+            x: cx + dx * cosA - dy * sinA,
+            y: cy + dx * sinA + dy * cosA
+          };
+        });
+      }
+      return pts;
+    }
+    case 'rectangle':
+    default:
+      return createRoundedRectPoints(
+        cx,
+        cy,
+        shape.width,
+        shape.height,
+        shape.cornerRadius,
+        shape.rotation,
+        10
+      );
+  }
 }
 
 export function createStarPoints(cx: number, cy: number, rOuter: number, rInner: number, points: number = 5): Point2D[] {

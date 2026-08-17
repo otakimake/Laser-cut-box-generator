@@ -11,11 +11,14 @@ import {
   exportToSVG,
   exportToDXF,
   Point2D,
-  NestingStrategy
+  NestingStrategy,
+  ShapeCutoutConfig,
+  generateShapeCutoutPoints
 } from './lib/boxGeometry';
 import { traceImage } from './lib/imageTracer';
 import ThreeBoxViewer from './components/ThreeBoxViewer';
 import FlatSheetLayout from './components/FlatSheetLayout';
+import ShapeCutoutManager from './components/ShapeCutoutManager';
 import {
   Box,
   Scissors,
@@ -464,6 +467,44 @@ export default function App() {
   const [islandBridgeMode, setIslandBridgeMode] = useState<'island_top' | 'island_bottom' | 'island_left' | 'island_right' | 'island_top_bottom' | 'island_left_right' | 'island_all_four'>('island_all_four');
   const [bridgeJitter, setBridgeJitter] = useState<number>(15);
 
+  // Shape Cutouts & Apertures state (with corner radius)
+  const [shapeCutouts, setShapeCutouts] = useState<ShapeCutoutConfig[]>([]);
+  const [activeCutoutId, setActiveCutoutId] = useState<string | null>(null);
+
+  const handleAddShapeCutout = (cutout: ShapeCutoutConfig) => {
+    setShapeCutouts((prev) => [...prev, cutout]);
+  };
+
+  const handleUpdateShapeCutout = (updated: ShapeCutoutConfig) => {
+    setShapeCutouts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  const handleDeleteShapeCutout = (id: string) => {
+    setShapeCutouts((prev) => prev.filter((c) => c.id !== id));
+    if (activeCutoutId === id) {
+      const remaining = shapeCutouts.filter((c) => c.id !== id);
+      setActiveCutoutId(remaining.length > 0 ? remaining[0].id : null);
+    }
+    triggerFeedback('Removed shape cutout', 'info');
+  };
+
+  const handleDuplicateShapeCutout = (id: string) => {
+    const target = shapeCutouts.find((c) => c.id === id);
+    if (!target) return;
+    const dupId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+    const duplicate: ShapeCutoutConfig = {
+      ...target,
+      id: dupId,
+      name: `${target.name} (Copy)`,
+      panelIds: [...(target.panelIds || [target.panelId || 'top'])],
+      offsetX: target.offsetX + 5,
+      offsetY: target.offsetY + 5
+    };
+    setShapeCutouts((prev) => [...prev, duplicate]);
+    setActiveCutoutId(dupId);
+    triggerFeedback(`Duplicated ${target.name}`, 'success');
+  };
+
   // Normalization, centering, positioning, scaling for engrave vector paths on wood panels
   const getScaledAndPositionedEngravePaths = (
     rawPaths: Point2D[][],
@@ -567,13 +608,32 @@ export default function App() {
     // Generate panels on parameter changes
     const generated = generateBoxPanels(params);
     
-    // Apply all engravings to their respective panels
+    // Apply shape cutouts and engravings to their respective panels
     const updated = generated.map((panel) => {
+      let panelHoles = panel.holes ? [...panel.holes] : [];
+      let panelEngravePaths = panel.engravePaths ? [...panel.engravePaths] : [];
+
+      // 1. Process active shape cutouts for this panel
+      const panelCutouts = shapeCutouts.filter(
+        (sc) => sc.enabled && ((sc.panelIds && sc.panelIds.includes(panel.id)) || sc.panelId === panel.id)
+      );
+
+      panelCutouts.forEach((sc) => {
+        const shapePts = generateShapeCutoutPoints(sc, panel.width, panel.height);
+        if (shapePts.length >= 3) {
+          if (sc.cutType === 'cut') {
+            panelHoles.push(shapePts);
+          } else {
+            panelEngravePaths.push(shapePts);
+          }
+        }
+      });
+
+      // 2. Apply all image engravings to their respective panels
       const panelEngravings = engravings.filter((eng) => 
         (eng.panelIds && eng.panelIds.includes(panel.id)) || eng.panelId === panel.id
       );
       if (panelEngravings.length > 0) {
-        let combinedPaths: Point2D[][] = [];
         panelEngravings.forEach((eng) => {
           const rawPaths = engravedPathsMap[eng.id];
           if (rawPaths && rawPaths.length > 0) {
@@ -588,18 +648,19 @@ export default function App() {
               eng.offsetY,
               eng.rotation
             );
-            combinedPaths = combinedPaths.concat(scaled);
+            panelEngravePaths = panelEngravePaths.concat(scaled);
           }
         });
-        return {
-          ...panel,
-          engravePaths: combinedPaths
-        };
       }
-      return panel;
+
+      return {
+        ...panel,
+        holes: panelHoles.length > 0 ? panelHoles : undefined,
+        engravePaths: panelEngravePaths.length > 0 ? panelEngravePaths : undefined
+      };
     });
     setPanels(updated);
-  }, [params, engravings, engravedPathsMap]);
+  }, [params, engravings, engravedPathsMap, shapeCutouts]);
 
   const loadPreset = (preset: Preset) => {
     setParams({
@@ -1841,6 +1902,19 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* Shape Cutouts & Apertures with Corner Radius */}
+              <ShapeCutoutManager
+                cutouts={shapeCutouts}
+                activeCutoutId={activeCutoutId}
+                panels={panels}
+                onSelectCutout={setActiveCutoutId}
+                onAddCutout={handleAddShapeCutout}
+                onUpdateCutout={handleUpdateShapeCutout}
+                onDeleteCutout={handleDeleteShapeCutout}
+                onDuplicateCutout={handleDuplicateShapeCutout}
+                onTriggerFeedback={triggerFeedback}
+              />
             </div>
           </div>
 
