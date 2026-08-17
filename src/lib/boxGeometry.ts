@@ -1172,11 +1172,39 @@ export interface PlacedPanel {
   sheetIndex: number;
 }
 
+export type NestingStrategy = 'max-rects' | 'shelf' | 'sequential';
+
+export interface NestingOptions {
+  strategy?: NestingStrategy;
+  allowRotation?: boolean;
+  spacing?: number;
+  customSheetWidth?: number;
+  customSheetHeight?: number;
+}
+
+export interface SheetStats {
+  sheetIndex: number;
+  partsCount: number;
+  usedWidth: number;
+  usedHeight: number;
+  usedArea: number;
+  sheetArea: number;
+  efficiency: number; // 0 to 100%
+}
+
 export interface NestingLayout {
   sheetWidth: number;
   sheetHeight: number;
   sheetsCount: number;
   placedPanels: PlacedPanel[];
+  totalPartsArea: number; // nominal surface area of all parts (mm²)
+  totalSheetArea: number; // total raw material area across used sheets (mm²)
+  overallEfficiency: number; // 0 to 100%
+  wastePercent: number; // 0 to 100%
+  tightBoundingWidth: number; // optimal compact sheet width (mm)
+  tightBoundingHeight: number; // optimal compact sheet height (mm)
+  sheetStats: SheetStats[];
+  strategyUsed: NestingStrategy;
 }
 
 export function getRotatedPointsAndHoles(panel: PanelData, rotate: boolean) {
@@ -1196,15 +1224,274 @@ export function getRotatedPointsAndHoles(panel: PanelData, rotate: boolean) {
   };
 }
 
-export function computeNesting(
-  panels: PanelData[],
-  spacing: number = 10,
-  customSheetWidth?: number,
-  customSheetHeight?: number
-): NestingLayout {
-  const sheetWidth = customSheetWidth || 800;
-  const sheetHeight = customSheetHeight || 500;
+interface FreeRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
+/**
+ * Packs panels onto sheets using the MaxRects Best-Fit Bin Packing algorithm
+ */
+function packMaxRectsSinglePass(
+  sortedPanels: PanelData[],
+  sheetWidth: number,
+  sheetHeight: number,
+  spacing: number,
+  allowRotation: boolean
+): { placedPanels: PlacedPanel[]; sheetsCount: number } {
+  interface SheetBin {
+    freeRects: FreeRect[];
+    placed: PlacedPanel[];
+  }
+
+  const sheets: SheetBin[] = [];
+
+  const createSheet = (): SheetBin => ({
+    freeRects: [
+      {
+        x: spacing,
+        y: spacing,
+        w: Math.max(0, sheetWidth - 2 * spacing),
+        h: Math.max(0, sheetHeight - 2 * spacing)
+      }
+    ],
+    placed: []
+  });
+
+  const pruneFreeRects = (freeRects: FreeRect[]): FreeRect[] => {
+    const result: FreeRect[] = [];
+    for (let i = 0; i < freeRects.length; i++) {
+      const a = freeRects[i];
+      if (a.w <= 0 || a.h <= 0) continue;
+      let isContained = false;
+      for (let j = 0; j < freeRects.length; j++) {
+        if (i === j) continue;
+        const b = freeRects[j];
+        if (
+          a.x >= b.x &&
+          a.y >= b.y &&
+          a.x + a.w <= b.x + b.w &&
+          a.y + a.h <= b.y + b.h
+        ) {
+          isContained = true;
+          break;
+        }
+      }
+      if (!isContained) {
+        result.push(a);
+      }
+    }
+    return result;
+  };
+
+  const splitFreeRect = (freeRect: FreeRect, placedX: number, placedY: number, placedW: number, placedH: number): FreeRect[] => {
+    // Placed rect with kerf safety spacing included
+    const px1 = placedX;
+    const py1 = placedY;
+    const px2 = placedX + placedW + spacing;
+    const py2 = placedY + placedH + spacing;
+
+    const rx1 = freeRect.x;
+    const ry1 = freeRect.y;
+    const rx2 = freeRect.x + freeRect.w;
+    const ry2 = freeRect.y + freeRect.h;
+
+    // Check intersection
+    if (px1 >= rx2 || px2 <= rx1 || py1 >= ry2 || py2 <= ry1) {
+      return [freeRect]; // No intersection
+    }
+
+    const newRects: FreeRect[] = [];
+
+    // Top slice
+    if (py1 > ry1 && py1 < ry2) {
+      newRects.push({
+        x: rx1,
+        y: ry1,
+        w: freeRect.w,
+        h: py1 - ry1
+      });
+    }
+
+    // Bottom slice
+    if (py2 < ry2 && py2 > ry1) {
+      newRects.push({
+        x: rx1,
+        y: py2,
+        w: freeRect.w,
+        h: ry2 - py2
+      });
+    }
+
+    // Left slice
+    if (px1 > rx1 && px1 < rx2) {
+      newRects.push({
+        x: rx1,
+        y: ry1,
+        w: px1 - rx1,
+        h: freeRect.h
+      });
+    }
+
+    // Right slice
+    if (px2 < rx2 && px2 > rx1) {
+      newRects.push({
+        x: px2,
+        y: ry1,
+        w: rx2 - px2,
+        h: freeRect.h
+      });
+    }
+
+    return newRects;
+  };
+
+  const allPlaced: PlacedPanel[] = [];
+
+  for (const panel of sortedPanels) {
+    const pw = panel.width;
+    const ph = panel.height;
+
+    let bestSheetIdx = -1;
+    let bestRectIdx = -1;
+    let bestRotate = false;
+    let bestScore1 = Infinity; // Best Short Side Fit
+    let bestScore2 = Infinity; // Best Area Fit / Bottom-Left tie breaker
+
+    // Look for best fit among all existing sheets
+    for (let sIdx = 0; sIdx < sheets.length; sIdx++) {
+      const sheet = sheets[sIdx];
+      for (let rIdx = 0; rIdx < sheet.freeRects.length; rIdx++) {
+        const fr = sheet.freeRects[rIdx];
+
+        // 1. Try Normal Orientation (0°)
+        if (pw <= fr.w && ph <= fr.h) {
+          const leftoverW = fr.w - pw;
+          const leftoverH = fr.h - ph;
+          const shortSideFit = Math.min(leftoverW, leftoverH);
+          const areaFit = leftoverW * leftoverH + (fr.y * 100 + fr.x);
+
+          if (shortSideFit < bestScore1 || (shortSideFit === bestScore1 && areaFit < bestScore2)) {
+            bestScore1 = shortSideFit;
+            bestScore2 = areaFit;
+            bestSheetIdx = sIdx;
+            bestRectIdx = rIdx;
+            bestRotate = false;
+          }
+        }
+
+        // 2. Try Rotated Orientation (90°)
+        if (allowRotation && ph <= fr.w && pw <= fr.h) {
+          const leftoverW = fr.w - ph;
+          const leftoverH = fr.h - pw;
+          const shortSideFit = Math.min(leftoverW, leftoverH);
+          const areaFit = leftoverW * leftoverH + (fr.y * 100 + fr.x);
+
+          if (shortSideFit < bestScore1 || (shortSideFit === bestScore1 && areaFit < bestScore2)) {
+            bestScore1 = shortSideFit;
+            bestScore2 = areaFit;
+            bestSheetIdx = sIdx;
+            bestRectIdx = rIdx;
+            bestRotate = true;
+          }
+        }
+      }
+
+      // If found on an earlier sheet, prefer packing the earlier sheet completely
+      if (bestSheetIdx === sIdx && bestScore1 !== Infinity) {
+        break;
+      }
+    }
+
+    // If no existing sheet could hold the panel, create a new sheet
+    if (bestSheetIdx === -1) {
+      const newSheet = createSheet();
+      const sIdx = sheets.length;
+      sheets.push(newSheet);
+
+      // Check fit on brand new sheet
+      const fr = newSheet.freeRects[0];
+      const fitsNormal = pw <= fr.w && ph <= fr.h;
+      const fitsRotated = allowRotation && ph <= fr.w && pw <= fr.h;
+
+      let rotate = false;
+      if (!fitsNormal && fitsRotated) {
+        rotate = true;
+      } else if (fitsNormal && fitsRotated) {
+        // Choose orientation that aligns with sheet aspect ratio
+        rotate = (ph > pw && sheetWidth > sheetHeight) || (pw > ph && sheetHeight > sheetWidth);
+      }
+
+      const placedW = rotate ? ph : pw;
+      const placedH = rotate ? pw : ph;
+      const placedX = fr.x;
+      const placedY = fr.y;
+
+      const placedItem: PlacedPanel = {
+        panel,
+        x: placedX,
+        y: placedY,
+        rotate,
+        sheetIndex: sIdx
+      };
+
+      allPlaced.push(placedItem);
+      newSheet.placed.push(placedItem);
+
+      // Update free rects of new sheet
+      let updatedRects: FreeRect[] = [];
+      for (const r of newSheet.freeRects) {
+        updatedRects.push(...splitFreeRect(r, placedX, placedY, placedW, placedH));
+      }
+      newSheet.freeRects = pruneFreeRects(updatedRects);
+    } else {
+      // Place on the selected sheet
+      const sheet = sheets[bestSheetIdx];
+      const fr = sheet.freeRects[bestRectIdx];
+      const placedW = bestRotate ? ph : pw;
+      const placedH = bestRotate ? pw : ph;
+      const placedX = fr.x;
+      const placedY = fr.y;
+
+      const placedItem: PlacedPanel = {
+        panel,
+        x: placedX,
+        y: placedY,
+        rotate: bestRotate,
+        sheetIndex: bestSheetIdx
+      };
+
+      allPlaced.push(placedItem);
+      sheet.placed.push(placedItem);
+
+      // Subdivide all intersecting free rects on this sheet
+      let updatedRects: FreeRect[] = [];
+      for (const r of sheet.freeRects) {
+        updatedRects.push(...splitFreeRect(r, placedX, placedY, placedW, placedH));
+      }
+      sheet.freeRects = pruneFreeRects(updatedRects);
+    }
+  }
+
+  return {
+    placedPanels: allPlaced,
+    sheetsCount: Math.max(1, sheets.length)
+  };
+}
+
+/**
+ * Packs panels using the Shelf / Flow Bin Packing method
+ */
+function packShelf(
+  panels: PanelData[],
+  sheetWidth: number,
+  sheetHeight: number,
+  spacing: number,
+  allowRotation: boolean,
+  preserveOrder: boolean = false
+): { placedPanels: PlacedPanel[]; sheetsCount: number } {
   interface ActiveSheet {
     currentX: number;
     currentY: number;
@@ -1214,30 +1501,33 @@ export function computeNesting(
   const sheets: ActiveSheet[] = [];
   const placedPanels: PlacedPanel[] = [];
 
-  for (const panel of panels) {
+  const panelList = preserveOrder
+    ? [...panels]
+    : [...panels].sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height));
+
+  for (const panel of panelList) {
     let pw = panel.width;
     let ph = panel.height;
 
-    // Check if rotating 90 deg fits strictly better when standard dimensions are too wide/tall,
-    // or if the standard dimensions don't fit but the rotated ones do.
     let rotate = false;
-    const standardFitsW = pw + spacing * 2 <= sheetWidth;
-    const standardFitsH = ph + spacing * 2 <= sheetHeight;
-    const rotatedFitsW = ph + spacing * 2 <= sheetWidth;
-    const rotatedFitsH = pw + spacing * 2 <= sheetHeight;
+    if (allowRotation) {
+      const standardFitsW = pw + spacing * 2 <= sheetWidth;
+      const standardFitsH = ph + spacing * 2 <= sheetHeight;
+      const rotatedFitsW = ph + spacing * 2 <= sheetWidth;
+      const rotatedFitsH = pw + spacing * 2 <= sheetHeight;
 
-    if (!standardFitsW && rotatedFitsW && rotatedFitsH) {
-      rotate = true;
-      pw = panel.height;
-      ph = panel.width;
+      if (!standardFitsW && rotatedFitsW && rotatedFitsH) {
+        rotate = true;
+        pw = panel.height;
+        ph = panel.width;
+      }
     }
 
     let placed = false;
-    // Iterate existing sheets to find the first sheet that has enough room
     for (let sIdx = 0; sIdx < sheets.length; sIdx++) {
       const s = sheets[sIdx];
-      
-      // Can it fit on current row?
+
+      // Fit on current row?
       if (s.currentX + pw + spacing <= sheetWidth && s.currentY + ph + spacing <= sheetHeight) {
         placedPanels.push({
           panel,
@@ -1251,8 +1541,8 @@ export function computeNesting(
         placed = true;
         break;
       }
-      
-      // Can we start a new row on this sheet?
+
+      // Fit on a new row?
       if (spacing + pw + spacing <= sheetWidth && s.currentY + s.rowHeight + spacing + ph + spacing <= sheetHeight) {
         s.currentY += s.rowHeight + spacing;
         s.currentX = spacing;
@@ -1271,7 +1561,6 @@ export function computeNesting(
       }
     }
 
-    // Place on a brand new sheet if it doesn't fit on any existing sheet
     if (!placed) {
       const newSheetIndex = sheets.length;
       sheets.push({
@@ -1289,13 +1578,144 @@ export function computeNesting(
     }
   }
 
-  const sheetsCount = Math.max(1, sheets.length);
+  return {
+    placedPanels,
+    sheetsCount: Math.max(1, sheets.length)
+  };
+}
+
+/**
+ * Computes an intelligent 2D Nesting layout with material analytics and multi-heuristic optimization
+ */
+export function computeNesting(
+  panels: PanelData[],
+  spacing: number = 10,
+  customSheetWidth?: number,
+  customSheetHeight?: number,
+  options?: NestingOptions | NestingStrategy
+): NestingLayout {
+  const sheetWidth = customSheetWidth || 800;
+  const sheetHeight = customSheetHeight || 500;
+
+  const resolvedOptions: NestingOptions = typeof options === 'string'
+    ? { strategy: options }
+    : options || {};
+
+  const strategy: NestingStrategy = resolvedOptions.strategy || 'max-rects';
+  const allowRotation = resolvedOptions.allowRotation !== undefined ? resolvedOptions.allowRotation : true;
+
+  let bestResult: { placedPanels: PlacedPanel[]; sheetsCount: number };
+
+  if (strategy === 'sequential') {
+    bestResult = packShelf(panels, sheetWidth, sheetHeight, spacing, allowRotation, true);
+  } else if (strategy === 'shelf') {
+    bestResult = packShelf(panels, sheetWidth, sheetHeight, spacing, allowRotation, false);
+  } else {
+    // Multi-heuristic MaxRects trials: evaluate multiple sorting orders and pick the one with lowest sheet count & tightest bounds
+    const heuristics: Array<(a: PanelData, b: PanelData) => number> = [
+      (a, b) => b.width * b.height - a.width * a.height, // 1. Area desc (Largest area first)
+      (a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height), // 2. Max dimension desc
+      (a, b) => (b.width + b.height) - (a.width + a.height), // 3. Perimeter desc
+      (a, b) => b.height - a.height, // 4. Height desc
+      (a, b) => b.width - a.width, // 5. Width desc
+      (a, b) => (Math.max(b.width, b.height) / Math.min(b.width, b.height)) - (Math.max(a.width, a.height) / Math.min(a.width, a.height)) // 6. Aspect Ratio desc
+    ];
+
+    let bestScore = Infinity;
+    let chosen = packMaxRectsSinglePass(panels, sheetWidth, sheetHeight, spacing, allowRotation);
+
+    for (const heuristic of heuristics) {
+      const sorted = [...panels].sort(heuristic);
+      const candidate = packMaxRectsSinglePass(sorted, sheetWidth, sheetHeight, spacing, allowRotation);
+
+      // Score: heavily penalize extra sheets, then prioritize smaller bounding area on sheet
+      let maxExtX = 0;
+      let maxExtY = 0;
+      for (const p of candidate.placedPanels) {
+        const pw = p.rotate ? p.panel.height : p.panel.width;
+        const ph = p.rotate ? p.panel.width : p.panel.height;
+        maxExtX = Math.max(maxExtX, p.x + pw);
+        maxExtY = Math.max(maxExtY, p.y + ph);
+      }
+
+      const score = candidate.sheetsCount * 10_000_000 + maxExtY * 1000 + maxExtX;
+      if (score < bestScore) {
+        bestScore = score;
+        chosen = candidate;
+      }
+    }
+
+    bestResult = chosen;
+  }
+
+  const { placedPanels, sheetsCount } = bestResult;
+
+  // Calculate detailed material analytics and per-sheet stats
+  let totalPartsArea = 0;
+  for (const panel of panels) {
+    totalPartsArea += panel.width * panel.height;
+  }
+
+  const totalSheetArea = sheetsCount * sheetWidth * sheetHeight;
+  const overallEfficiency = totalSheetArea > 0
+    ? Math.min(100, (totalPartsArea / totalSheetArea) * 100)
+    : 0;
+  const wastePercent = Math.max(0, 100 - overallEfficiency);
+
+  // Calculate tight bounding dimensions
+  let maxGlobalUsedW = 0;
+  let maxGlobalUsedH = 0;
+
+  const sheetStats: SheetStats[] = [];
+  for (let sIdx = 0; sIdx < sheetsCount; sIdx++) {
+    const sheetPanels = placedPanels.filter((p) => p.sheetIndex === sIdx);
+    let maxX = 0;
+    let maxY = 0;
+    let sheetPartsArea = 0;
+
+    for (const p of sheetPanels) {
+      const pw = p.rotate ? p.panel.height : p.panel.width;
+      const ph = p.rotate ? p.panel.width : p.panel.height;
+      maxX = Math.max(maxX, p.x + pw);
+      maxY = Math.max(maxY, p.y + ph);
+      sheetPartsArea += p.panel.width * p.panel.height;
+    }
+
+    const usedWidth = maxX > 0 ? maxX + spacing : 0;
+    const usedHeight = maxY > 0 ? maxY + spacing : 0;
+    const singleSheetArea = sheetWidth * sheetHeight;
+    const efficiency = singleSheetArea > 0 ? Math.min(100, (sheetPartsArea / singleSheetArea) * 100) : 0;
+
+    maxGlobalUsedW = Math.max(maxGlobalUsedW, usedWidth);
+    maxGlobalUsedH = Math.max(maxGlobalUsedH, usedHeight);
+
+    sheetStats.push({
+      sheetIndex: sIdx,
+      partsCount: sheetPanels.length,
+      usedWidth,
+      usedHeight,
+      usedArea: maxX * maxY,
+      sheetArea: singleSheetArea,
+      efficiency
+    });
+  }
+
+  const tightBoundingWidth = Math.ceil(Math.max(maxGlobalUsedW, 100));
+  const tightBoundingHeight = Math.ceil(Math.max(maxGlobalUsedH, 100));
 
   return {
     sheetWidth,
     sheetHeight,
     sheetsCount,
-    placedPanels
+    placedPanels,
+    totalPartsArea,
+    totalSheetArea,
+    overallEfficiency,
+    wastePercent,
+    tightBoundingWidth,
+    tightBoundingHeight,
+    sheetStats,
+    strategyUsed: strategy
   };
 }
 
@@ -1307,9 +1727,10 @@ export function exportToSVG(
   params: BoxParams,
   nestingSpacing: number = 10,
   customSheetWidth?: number,
-  customSheetHeight?: number
+  customSheetHeight?: number,
+  options?: NestingOptions | NestingStrategy
 ): string {
-  const nesting = computeNesting(panels, nestingSpacing, customSheetWidth, customSheetHeight);
+  const nesting = computeNesting(panels, nestingSpacing, customSheetWidth, customSheetHeight, options);
   const { sheetWidth, sheetHeight, sheetsCount, placedPanels } = nesting;
   const verticalGap = 20; // 20mm gap between physical stacked cutout boards
   const totalSvgHeight = sheetsCount * sheetHeight + (sheetsCount - 1) * verticalGap;
@@ -1385,9 +1806,10 @@ export function exportToDXF(
   panels: PanelData[],
   nestingSpacing: number = 10,
   customSheetWidth?: number,
-  customSheetHeight?: number
+  customSheetHeight?: number,
+  options?: NestingOptions | NestingStrategy
 ): string {
-  const nesting = computeNesting(panels, nestingSpacing, customSheetWidth, customSheetHeight);
+  const nesting = computeNesting(panels, nestingSpacing, customSheetWidth, customSheetHeight, options);
   const { sheetWidth, sheetHeight, sheetsCount, placedPanels } = nesting;
   const verticalGap = 20;
 

@@ -4,16 +4,49 @@
  */
 
 import { useState, useEffect } from 'react';
-import { PanelData, computeNesting, getRotatedPointsAndHoles } from '../lib/boxGeometry';
-import { Layers, RotateCcw, Sliders, LayoutGrid, Download, Scissors, Check, Eye, Send, User, Mail, MessageSquare, FileCode, ExternalLink, Link } from 'lucide-react';
+import {
+  PanelData,
+  computeNesting,
+  getRotatedPointsAndHoles,
+  NestingStrategy,
+  NestingLayout
+} from '../lib/boxGeometry';
+import {
+  Layers,
+  RotateCcw,
+  Sliders,
+  LayoutGrid,
+  Download,
+  Scissors,
+  Check,
+  Eye,
+  Send,
+  User,
+  Mail,
+  MessageSquare,
+  FileCode,
+  ExternalLink,
+  Sparkles,
+  Cpu,
+  Maximize2,
+  BarChart2,
+  RefreshCw,
+  Zap,
+  Info
+} from 'lucide-react';
 
 interface FlatSheetLayoutProps {
   panels: PanelData[];
   spacing: number;
   sheetWidth: number;
   sheetHeight: number;
+  nestingStrategy?: NestingStrategy;
+  allowRotation?: boolean;
   onSheetWidthChange: (w: number) => void;
   onSheetHeightChange: (h: number) => void;
+  onSpacingChange?: (s: number) => void;
+  onNestingStrategyChange?: (strategy: NestingStrategy) => void;
+  onAllowRotationChange?: (allow: boolean) => void;
   onExportSVG?: () => void;
   onExportDXF?: () => void;
   onSendToStaff?: (senderName: string, senderEmail: string, notes: string, fileName?: string) => void;
@@ -31,18 +64,69 @@ export default function FlatSheetLayout({
   spacing,
   sheetWidth,
   sheetHeight,
+  nestingStrategy = 'max-rects',
+  allowRotation = true,
   onSheetWidthChange,
   onSheetHeightChange,
+  onSpacingChange,
+  onNestingStrategyChange,
+  onAllowRotationChange,
   onExportSVG,
   onExportDXF,
   onSendToStaff
 }: FlatSheetLayoutProps) {
-  // Compute full nesting with current dimensions
-  const nesting = computeNesting(panels, spacing, sheetWidth, sheetHeight);
-  const { placedPanels, sheetsCount } = nesting;
+  // Local fallback if props not controlled externally
+  const [localStrategy, setLocalStrategy] = useState<NestingStrategy>(nestingStrategy);
+  const [localAllowRotation, setLocalAllowRotation] = useState<boolean>(allowRotation);
+  const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
+
+  useEffect(() => {
+    setLocalStrategy(nestingStrategy);
+  }, [nestingStrategy]);
+
+  useEffect(() => {
+    setLocalAllowRotation(allowRotation);
+  }, [allowRotation]);
+
+  const activeStrategy = onNestingStrategyChange ? nestingStrategy : localStrategy;
+  const activeAllowRotation = onAllowRotationChange ? allowRotation : localAllowRotation;
+
+  const handleStrategySelect = (strat: NestingStrategy) => {
+    if (onNestingStrategyChange) {
+      onNestingStrategyChange(strat);
+    } else {
+      setLocalStrategy(strat);
+    }
+  };
+
+  const handleAllowRotationToggle = (val: boolean) => {
+    if (onAllowRotationChange) {
+      onAllowRotationChange(val);
+    } else {
+      setLocalAllowRotation(val);
+    }
+  };
+
+  // Compute full nesting with current dimensions and options
+  const nesting: NestingLayout = computeNesting(panels, spacing, sheetWidth, sheetHeight, {
+    strategy: activeStrategy,
+    allowRotation: activeAllowRotation
+  });
+
+  const {
+    placedPanels,
+    sheetsCount,
+    totalPartsArea,
+    totalSheetArea,
+    overallEfficiency,
+    wastePercent,
+    tightBoundingWidth,
+    tightBoundingHeight,
+    sheetStats
+  } = nesting;
 
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
-  
+
   // Interactive active sheet tab page state
   const [selectedSheetIndex, setSelectedSheetIndex] = useState<number>(0);
   const [showAllSheets, setShowAllSheets] = useState<boolean>(false);
@@ -117,8 +201,19 @@ export default function FlatSheetLayout({
     }
   };
 
+  // One-click Auto Compact to tightest material bounds
+  const handleAutoCompactStock = () => {
+    setIsOptimizing(true);
+    onSheetWidthChange(tightBoundingWidth);
+    onSheetHeightChange(tightBoundingHeight);
+    setWidthInput(tightBoundingWidth.toString());
+    setHeightInput(tightBoundingHeight.toString());
+    setTimeout(() => setIsOptimizing(false), 500);
+  };
+
   // Determine active sheet to draw if not viewing stacked
   const activeSheetIdx = Math.min(selectedSheetIndex, sheetsCount - 1);
+  const activeSheetStat = sheetStats[activeSheetIdx];
 
   // Check if any parts exceed dimensions on their respective assigned sheets
   const overflowPanels = placedPanels.filter(placed => {
@@ -133,33 +228,68 @@ export default function FlatSheetLayout({
   const verticalGap = 20;
   const totalSvgHeight = sheetsCount * sheetHeight + (sheetsCount - 1) * verticalGap;
 
+  // Formatting helpers for surface area
+  const formatArea = (areaMm2: number) => {
+    const cm2 = areaMm2 / 100;
+    if (cm2 >= 10000) {
+      return `${(cm2 / 10000).toFixed(2)} m²`;
+    }
+    return `${cm2.toFixed(1)} cm²`;
+  };
+
+  // Efficiency color classification
+  const getEfficiencyColor = (eff: number) => {
+    if (eff >= 75) return { bg: 'bg-emerald-500', text: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Optimal Density' };
+    if (eff >= 50) return { bg: 'bg-amber-500', text: 'text-amber-700', badge: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Standard Density' };
+    return { bg: 'bg-blue-500', text: 'text-blue-700', badge: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Oversized Stock (Trim to fit)' };
+  };
+
+  const effInfo = getEfficiencyColor(overallEfficiency);
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col gap-5">
       
-      {/* Top Banner Row */}
+      {/* Top Banner Row: Header & Key Metrics Readout */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-600">
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Laser-Ready Cut Template</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Auto-paginates components onto multiple material sheets if they exceed dimensions.
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Laser-Ready Cut Template</h4>
+              <span className="bg-blue-100/80 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-200/60 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-blue-600" />
+                Smart Nesting Active
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mt-0.5">
+              Intelligent multi-pass bin packing nests components to maximize sheet density and minimize material waste.
             </p>
           </div>
         </div>
         
-        {/* Quick Readout */}
+        {/* Quick Readout Header */}
         <div className="flex flex-wrap items-center gap-4 border-t xl:border-t-0 xl:border-l border-slate-200 pt-3 xl:pt-0 xl:pl-4">
           <div className="text-left">
-            <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Board Format</span>
+            <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sheet Format</span>
             <span className="text-xs font-mono font-bold text-blue-600">
-              {sheetWidth.toFixed(0)} <span className="text-[10px] text-slate-400">x</span> {sheetHeight.toFixed(0)} <span className="text-[9px] text-slate-500">mm</span>
+              {sheetWidth.toFixed(0)} <span className="text-[10px] text-slate-400">×</span> {sheetHeight.toFixed(0)} <span className="text-[9px] text-slate-500">mm</span>
             </span>
           </div>
           <div className="text-left border-l border-slate-200 pl-4">
-            <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Required Sheets</span>
+            <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Material Efficiency</span>
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-mono font-bold ${effInfo.text}`}>
+                {overallEfficiency.toFixed(1)}%
+              </span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${effInfo.badge}`}>
+                {effInfo.label}
+              </span>
+            </div>
+          </div>
+          <div className="text-left border-l border-slate-200 pl-4">
+            <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Required Boards</span>
             <span className="text-xs font-mono font-bold text-blue-600">
               {sheetsCount} <span className="text-[9px] text-slate-500">{sheetsCount === 1 ? 'board' : 'boards'}</span>
             </span>
@@ -167,15 +297,194 @@ export default function FlatSheetLayout({
           <div className="text-left border-l border-slate-200 pl-4">
             <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Cut Parts</span>
             <span className="text-xs font-mono font-bold text-blue-600">
-              {panels.length} <span className="text-[9px] text-slate-500">planes</span>
+              {panels.length} <span className="text-[9px] text-slate-500">panels</span>
             </span>
           </div>
           {hasOverflow && (
             <div className="bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1.5 animate-pulse shrink-0">
-              <span>⚠️ FIT WARNING</span>
+              <span>⚠️ FIT OVERFLOW</span>
             </div>
           )}
         </div>
+      </div>
+
+      {/* NESTING & MATERIAL EFFICIENCY OPTIMIZATION SECTION */}
+      <div className="bg-linear-to-r from-blue-50/70 via-slate-50 to-blue-50/40 border border-blue-200/80 rounded-xl p-4 shadow-sm flex flex-col gap-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-100/80">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Cpu className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                Nesting Engine &amp; Waste Reducer
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                  {wastePercent < 25 ? 'Low Scrap' : `${wastePercent.toFixed(0)}% Offcut Available`}
+                </span>
+              </span>
+              <p className="text-[11px] text-slate-600">
+                Choose the packing algorithm and orientation options to minimize offcut scrap and save raw material.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Auto-Fit Action Button */}
+          <button
+            onClick={handleAutoCompactStock}
+            disabled={isOptimizing}
+            className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-3.5 py-2 rounded-lg shadow-sm transition-all active:scale-[0.98] cursor-pointer shrink-0"
+            title="Automatically shrinks the stock sheet to the exact tightest rectangular boundary containing all nested panels"
+          >
+            <Maximize2 className={`w-3.5 h-3.5 ${isOptimizing ? 'animate-spin' : ''}`} />
+            <span>Trim Sheet to Minimum Fit ({tightBoundingWidth}×{tightBoundingHeight}mm)</span>
+          </button>
+        </div>
+
+        {/* Nesting Controls Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+          
+          {/* 1. Algorithm Selection */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3 h-3 text-blue-600" />
+              Packing Strategy
+            </label>
+            <div className="grid grid-cols-3 gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-2xs text-center">
+              <button
+                type="button"
+                onClick={() => handleStrategySelect('max-rects')}
+                className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                  activeStrategy === 'max-rects'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title="Best-Fit MaxRects bin packing tries all orientations and size heuristics to minimize required sheets"
+              >
+                Max Density
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStrategySelect('shelf')}
+                className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                  activeStrategy === 'shelf'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title="Best-Fit Decreasing Shelf row layout"
+              >
+                Shelf Flow
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStrategySelect('sequential')}
+                className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                  activeStrategy === 'sequential'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title="Preserves original front, back, top, bottom box panel sequence"
+              >
+                Sequential
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Rotation Permission Toggle */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+              <RotateCcw className="w-3 h-3 text-blue-600" />
+              Orientation Flexibility
+            </label>
+            <label className="flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs cursor-pointer hover:border-slate-300 transition-all">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold text-slate-800">Allow 90° Rotation</span>
+                <span className="text-[9px] text-slate-500">Rotate parts to fill tight slots &amp; voids</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={activeAllowRotation}
+                onChange={(e) => handleAllowRotationToggle(e.target.checked)}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+              />
+            </label>
+          </div>
+
+          {/* 3. Kerf / Spacing Margin Quick Adjust */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-3 h-3 text-blue-600" />
+                Inter-Part Kerf Margin
+              </label>
+              <span className="text-[11px] font-mono font-bold text-blue-600">{spacing} mm</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-2xs">
+              <input
+                type="range"
+                min="2"
+                max="30"
+                step="1"
+                value={spacing}
+                onChange={(e) => onSpacingChange && onSpacingChange(Number(e.target.value))}
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
+              />
+              <div className="flex gap-1 shrink-0">
+                {[3, 6, 10].map((presetVal) => (
+                  <button
+                    key={presetVal}
+                    type="button"
+                    onClick={() => onSpacingChange && onSpacingChange(presetVal)}
+                    className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border transition-all cursor-pointer ${
+                      spacing === presetVal
+                        ? 'bg-blue-100 text-blue-700 border-blue-300'
+                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {presetVal}mm
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Material Utilization Progress Meter */}
+        <div className="flex flex-col gap-1.5 pt-1">
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="font-bold text-slate-700 flex items-center gap-1.5">
+              <BarChart2 className="w-3.5 h-3.5 text-blue-600" />
+              Material Utilization Breakdown:
+            </span>
+            <div className="flex items-center gap-3 text-[10px] font-mono">
+              <span className="text-slate-600 font-bold">
+                Parts Surface: <strong className="text-slate-900">{formatArea(totalPartsArea)}</strong>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600 font-bold">
+                Stock Area: <strong className="text-slate-900">{formatArea(totalSheetArea)}</strong>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600 font-bold">
+                Contiguous Offcut: <strong className="text-emerald-700">{formatArea(Math.max(0, totalSheetArea - totalPartsArea))}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden flex shadow-inner">
+            <div
+              className={`h-full ${effInfo.bg} transition-all duration-300`}
+              style={{ width: `${Math.min(100, Math.max(5, overallEfficiency))}%` }}
+              title={`Used Parts: ${overallEfficiency.toFixed(1)}%`}
+            />
+            <div
+              className="h-full bg-slate-300 transition-all duration-300"
+              style={{ width: `${Math.min(100, Math.max(0, 100 - overallEfficiency))}%` }}
+              title={`Offcut Scrap: ${(100 - overallEfficiency).toFixed(1)}%`}
+            />
+          </div>
+        </div>
+
       </div>
 
       {/* Grid Layout: Config controls + SVG Preview canvas */}
@@ -187,7 +496,7 @@ export default function FlatSheetLayout({
           <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col gap-4">
             <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
               <Sliders className="w-3.5 h-3.5" />
-              <span>Sheet Dimensions</span>
+              <span>Stock Sheet Dimensions</span>
             </div>
 
             {/* Custom stock sheet inputs */}
@@ -202,7 +511,7 @@ export default function FlatSheetLayout({
                     value={widthInput}
                     onChange={(e) => handleWidthChange(e.target.value)}
                     onBlur={handleWidthBlur}
-                    className="flex-grow w-full bg-white border border-slate-250 focus:border-blue-600 text-blue-700 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
+                    className="grow w-full bg-white border border-slate-250 focus:border-blue-600 text-blue-700 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
                     placeholder="W (mm)"
                   />
                   <div className="bg-slate-100 border-y border-r border-slate-200 text-slate-500 text-[10px] font-extrabold px-2.5 h-8 flex items-center justify-center rounded-r select-none">
@@ -221,7 +530,7 @@ export default function FlatSheetLayout({
                     value={heightInput}
                     onChange={(e) => handleHeightChange(e.target.value)}
                     onBlur={handleHeightBlur}
-                    className="flex-grow w-full bg-white border border-slate-250 focus:border-blue-600 text-blue-700 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
+                    className="grow w-full bg-white border border-slate-250 focus:border-blue-600 text-blue-700 font-extrabold font-mono text-xs rounded-l py-1.5 px-2.5 focus:outline-none"
                     placeholder="H (mm)"
                   />
                   <div className="bg-slate-100 border-y border-r border-slate-200 text-slate-500 text-[10px] font-extrabold px-2.5 h-8 flex items-center justify-center rounded-r select-none">
@@ -233,17 +542,12 @@ export default function FlatSheetLayout({
 
             {/* Quick Auto Min Scale Button */}
             <button
-              onClick={() => {
-                // Auto calculate optimal minimal dimensions based on natural nesting
-                const tempNesting = computeNesting(panels, spacing);
-                onSheetWidthChange(Math.ceil(tempNesting.sheetWidth));
-                onSheetHeightChange(Math.ceil(tempNesting.sheetHeight));
-              }}
-              className="mt-1.5 flex items-center justify-center gap-2 hover:bg-slate-100 bg-white border border-slate-200 hover:border-slate-300 py-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-700 transition-all cursor-pointer shadow-sm"
+              onClick={handleAutoCompactStock}
+              className="mt-1.5 flex items-center justify-center gap-2 hover:bg-slate-100 bg-white border border-slate-200 hover:border-slate-300 py-1.5 px-3 rounded-lg text-[10px] font-bold text-slate-700 transition-all cursor-pointer shadow-xs"
               title="Resize the stock sheet to the tightest minimum size fitting all panels."
             >
               <RotateCcw className="w-3 h-3 text-slate-500" />
-              <span>Reset to Minimum Fit</span>
+              <span>Auto-Shrink to Minimum ({tightBoundingWidth}×{tightBoundingHeight}mm)</span>
             </button>
           </div>
 
@@ -265,8 +569,8 @@ export default function FlatSheetLayout({
                     }}
                     className={`text-left py-2 px-3 rounded-lg border text-xs transition-all cursor-pointer flex items-center gap-2.5 ${
                       isActive
-                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold shadow-sm'
-                        : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800 shadow-sm'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800 shadow-xs'
                     }`}
                   >
                     <span className="text-sm shrink-0">{preset.icon}</span>
@@ -278,7 +582,7 @@ export default function FlatSheetLayout({
           </div>
 
           {/* Quick Exports Section */}
-          <div className="bg-blue-50/50 border border-blue-200 p-4 rounded-xl flex flex-col gap-3 flex-grow justify-start shadow-sm">
+          <div className="bg-blue-50/50 border border-blue-200 p-4 rounded-xl flex flex-col gap-3 grow justify-start shadow-xs">
             <div className="flex items-center gap-1.5 text-[10px] text-blue-700 font-extrabold tracking-wider uppercase select-none">
               <Download className="w-3.5 h-3.5" />
               <span>Generate Cut Files</span>
@@ -286,7 +590,7 @@ export default function FlatSheetLayout({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={onExportSVG}
-                className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-blue-300 shadow-sm font-extrabold py-2 px-1.5 rounded-lg text-[10px] transition-all active:scale-[0.98] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-blue-300 shadow-xs font-extrabold py-2 px-1.5 rounded-lg text-[10px] transition-all active:scale-[0.98] cursor-pointer"
                 title="Download 2D design SVG file"
               >
                 <Download className="w-3 h-3 text-blue-600" />
@@ -294,7 +598,7 @@ export default function FlatSheetLayout({
               </button>
               <button
                 onClick={onExportDXF}
-                className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm font-extrabold py-2 px-1.5 rounded-lg text-[10px] transition-all active:scale-[0.98] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs font-extrabold py-2 px-1.5 rounded-lg text-[10px] transition-all active:scale-[0.98] cursor-pointer"
                 title="Download standard 2D DXF CAD file"
               >
                 <Scissors className="w-3 h-3 text-blue-600" />
@@ -302,7 +606,7 @@ export default function FlatSheetLayout({
               </button>
             </div>
             <div className="text-[9.5px] text-slate-600 leading-normal font-medium mt-1">
-              File coordinates set relative to specified <strong className="text-slate-800">{sheetWidth.toFixed(0)}x{sheetHeight.toFixed(0)}mm</strong> boards.
+              File coordinates set relative to specified <strong className="text-slate-800">{sheetWidth.toFixed(0)}×{sheetHeight.toFixed(0)}mm</strong> boards.
             </div>
           </div>
 
@@ -311,7 +615,7 @@ export default function FlatSheetLayout({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-extrabold tracking-wider uppercase select-none">
                 <Send className="w-3.5 h-3.5" />
-                <span>One-Click Laser Driver Redirection</span>
+                <span>Laser Driver Redirection</span>
               </div>
               <span className="bg-emerald-50 text-emerald-700 text-[9px] font-mono px-1.5 py-0.5 rounded border border-emerald-200">
                 CORS *
@@ -401,7 +705,7 @@ export default function FlatSheetLayout({
                   }
                 }}
                 disabled={!senderName || !senderEmail}
-                className="mt-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-extrabold py-2 px-3 rounded-lg text-xs shadow-sm transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
+                className="mt-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-extrabold py-2 px-3 rounded-lg text-xs shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
                 title="Generate CORS hosted SVG link & redirect with query params to Laser Controller"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -422,22 +726,34 @@ export default function FlatSheetLayout({
           {/* MULTI_SHEET NAVIGATION TABS */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50 border border-slate-200 p-2 rounded-xl">
             <div className="flex items-center gap-2 overflow-x-auto p-1 scrollbar-none">
-              {Array.from({ length: sheetsCount }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setSelectedSheetIndex(index);
-                    setShowAllSheets(false);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs leading-none transition-all cursor-pointer font-bold ${
-                    !showAllSheets && activeSheetIdx === index
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-650 hover:text-slate-800 shadow-sm'
-                  }`}
-                >
-                  Board {index + 1}
-                </button>
-              ))}
+              {Array.from({ length: sheetsCount }).map((_, index) => {
+                const sheetStat = sheetStats[index];
+                return (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setSelectedSheetIndex(index);
+                      setShowAllSheets(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs leading-none transition-all cursor-pointer font-bold flex items-center gap-1.5 ${
+                      !showAllSheets && activeSheetIdx === index
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-650 hover:text-slate-800 shadow-xs'
+                    }`}
+                  >
+                    <span>Board {index + 1}</span>
+                    {sheetStat && (
+                      <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                        !showAllSheets && activeSheetIdx === index
+                          ? 'bg-blue-700 text-blue-100'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {sheetStat.efficiency.toFixed(0)}%
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {sheetsCount > 1 && (
@@ -446,7 +762,7 @@ export default function FlatSheetLayout({
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   showAllSheets
                     ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                    : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-750 shadow-sm'
+                    : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-750 shadow-xs'
                 }`}
               >
                 <Eye className="w-3.5 h-3.5 text-blue-600" />
@@ -478,7 +794,7 @@ export default function FlatSheetLayout({
           >
             <svg
               viewBox={showAllSheets ? `0 0 ${sheetWidth} ${totalSvgHeight}` : `0 0 ${sheetWidth} ${sheetHeight}`}
-              className="w-full max-w-full h-auto drop-shadow-sm select-none cad-cursor-default"
+              className="w-full max-w-full h-auto drop-shadow-xs select-none cad-cursor-default"
               style={{ maxHeight: showAllSheets ? '420px' : '380px' }}
             >
               <defs>
@@ -495,6 +811,7 @@ export default function FlatSheetLayout({
               {Array.from({ length: showAllSheets ? sheetsCount : 1 }).map((_, i) => {
                 const drawIdx = showAllSheets ? i : activeSheetIdx;
                 const offsetY = showAllSheets ? i * (sheetHeight + verticalGap) : 0;
+                const stat = sheetStats[drawIdx];
 
                 return (
                   <g key={i} transform={`translate(0, ${offsetY})`}>
@@ -511,6 +828,21 @@ export default function FlatSheetLayout({
                     {/* Grid backdrop */}
                     <rect width={sheetWidth} height={sheetHeight} fill="url(#grid)" />
 
+                    {/* Dotted bounding box of nested components on this sheet */}
+                    {stat && stat.usedWidth > 0 && stat.usedHeight > 0 && (
+                      <rect
+                        x="0"
+                        y="0"
+                        width={stat.usedWidth}
+                        height={stat.usedHeight}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="0.4"
+                        strokeDasharray="2 2"
+                        opacity="0.6"
+                      />
+                    )}
+
                     {/* Sheet identification label burned inside canvas */}
                     <text
                       x="10"
@@ -521,7 +853,7 @@ export default function FlatSheetLayout({
                       fontWeight="extrabold"
                       className="opacity-70 uppercase tracking-widest"
                     >
-                      BOARD {drawIdx + 1} OF {sheetsCount} ({sheetWidth.toFixed(0)}x{sheetHeight.toFixed(0)}mm)
+                      BOARD {drawIdx + 1} OF {sheetsCount} ({sheetWidth.toFixed(0)}×{sheetHeight.toFixed(0)}mm) • {stat ? `${stat.efficiency.toFixed(1)}% Eff` : ''}
                     </text>
                   </g>
                 );
@@ -634,16 +966,16 @@ export default function FlatSheetLayout({
                       {isHovered && (
                         <>
                           <rect
-                            x={x + renderW / 2 - 35}
-                            y={offsetY + y + renderH / 2 - 8}
-                            width="70"
-                            height="13"
+                            x={x + renderW / 2 - 40}
+                            y={offsetY + y + renderH / 2 - 9}
+                            width="80"
+                            height="16"
                             rx="3"
                             fill="#0f172a"
                           />
                           <text
                             x={x + renderW / 2}
-                            y={offsetY + y + renderH / 2 - 1.5}
+                            y={offsetY + y + renderH / 2 - 2}
                             fill="#ffffff"
                             fontSize="4.5"
                             fontFamily="monospace"
@@ -651,7 +983,18 @@ export default function FlatSheetLayout({
                             textAnchor="middle"
                             alignmentBaseline="middle"
                           >
-                            {panel.width.toFixed(0)}x{panel.height.toFixed(0)} mm {rotate ? '🔄' : ''}
+                            {panel.width.toFixed(0)}×{panel.height.toFixed(0)} mm {rotate ? '(90°)' : ''}
+                          </text>
+                          <text
+                            x={x + renderW / 2}
+                            y={offsetY + y + renderH / 2 + 3.5}
+                            fill="#93c5fd"
+                            fontSize="3.5"
+                            fontFamily="monospace"
+                            textAnchor="middle"
+                            alignmentBaseline="middle"
+                          >
+                            Area: {((panel.width * panel.height) / 100).toFixed(1)} cm²
                           </text>
                         </>
                       )}
@@ -686,6 +1029,7 @@ export default function FlatSheetLayout({
             const renderW = rotate ? panel.height : panel.width;
             const renderH = rotate ? panel.width : panel.height;
             const isOverflowing = (x + renderW > sheetWidth) || (y + renderH > sheetHeight);
+            const panelArea = (panel.width * panel.height) / 100;
             return (
               <div
                 key={panel.id}
@@ -693,20 +1037,20 @@ export default function FlatSheetLayout({
                 onMouseLeave={() => setHoveredPanelId(null)}
                 className={`px-4 py-3 rounded-xl border transition-all duration-150 flex flex-col justify-between ${
                   hoveredPanelId === panel.id
-                    ? 'bg-blue-50 border-blue-500/50 shadow-sm ring-1 ring-blue-500/10'
+                    ? 'bg-blue-50 border-blue-500/50 shadow-xs ring-1 ring-blue-500/10'
                     : isOverflowing
                     ? 'bg-red-50 border-red-200 text-red-800'
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
                 }`}
               >
                 <div className="flex items-start justify-between gap-1.5">
                   <div>
                     <span className={`text-xs font-bold capitalize flex items-center gap-2 ${isOverflowing ? 'text-red-600' : 'text-slate-800'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${isOverflowing ? 'bg-red-500' : 'bg-blue-600'}`} />
-                      {panel.name} {rotate && <span className="text-yellow-600 text-[10px]" title="Automatically rotated 90 degrees to fit sheet boundaries">🔄</span>}
+                      {panel.name} {rotate && <span className="text-yellow-600 text-[10px]" title="Automatically rotated 90 degrees to fit sheet boundaries">🔄 90°</span>}
                     </span>
                     <span className="block text-[10px] text-slate-500 mt-0.5 font-mono">
-                      ID: {panel.id} • Board {sheetIndex + 1}
+                      ID: {panel.id} • Board {sheetIndex + 1} • {panelArea.toFixed(1)} cm²
                     </span>
                   </div>
                   {isOverflowing && (
@@ -717,7 +1061,7 @@ export default function FlatSheetLayout({
                 </div>
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
                   <span className="text-xs font-mono text-slate-500 font-semibold" title="Original Dimensions">
-                    {panel.width} x {panel.height} mm
+                    {panel.width} × {panel.height} mm
                   </span>
                   <span className="text-[9px] text-slate-500 font-mono">
                     Offset: X:{x.toFixed(0)}, Y:{y.toFixed(0)}

@@ -10,7 +10,8 @@ import {
   PanelData,
   exportToSVG,
   exportToDXF,
-  Point2D
+  Point2D,
+  NestingStrategy
 } from './lib/boxGeometry';
 import { traceImage } from './lib/imageTracer';
 import ThreeBoxViewer from './components/ThreeBoxViewer';
@@ -426,10 +427,12 @@ export default function App() {
   // Auto generated panels based on parameters
   const [panels, setPanels] = useState<PanelData[]>([]);
 
-  // Safety nesting layout spacing
+  // Safety nesting layout spacing & optimization
   const [nestingSpacing, setNestingSpacing] = useState<number>(8);
   const [sheetWidth, setSheetWidth] = useState<number>(600);
   const [sheetHeight, setSheetHeight] = useState<number>(400);
+  const [nestingStrategy, setNestingStrategy] = useState<NestingStrategy>('max-rects');
+  const [allowRotation, setAllowRotation] = useState<boolean>(true);
 
   // Traced engraving state
   interface EngravingConfig {
@@ -638,7 +641,10 @@ export default function App() {
 
   const handleExportSVG = () => {
     try {
-      const svgContent = exportToSVG(panels, params, nestingSpacing, sheetWidth, sheetHeight);
+      const svgContent = exportToSVG(panels, params, nestingSpacing, sheetWidth, sheetHeight, {
+        strategy: nestingStrategy,
+        allowRotation
+      });
       const filename = `laser_box_${params.width}x${params.height}x${params.depth}_${params.boxType}.svg`;
       triggerDownload(filename, svgContent, 'image/svg+xml');
       triggerFeedback('SVG Template downloaded successfully!', 'success');
@@ -649,7 +655,10 @@ export default function App() {
 
   const handleExportDXF = () => {
     try {
-      const dxfContent = exportToDXF(panels, nestingSpacing, sheetWidth, sheetHeight);
+      const dxfContent = exportToDXF(panels, nestingSpacing, sheetWidth, sheetHeight, {
+        strategy: nestingStrategy,
+        allowRotation
+      });
       const filename = `laser_box_${params.width}x${params.height}x${params.depth}_${params.boxType}.dxf`;
       triggerDownload(filename, dxfContent, 'image/vnd.dxf');
       triggerFeedback('DXF Template downloaded successfully!', 'success');
@@ -660,7 +669,10 @@ export default function App() {
 
   const handleSendToStaff = async (senderName: string, senderEmail: string, notes: string, customFileName?: string) => {
     try {
-      const svgContent = exportToSVG(panels, params, nestingSpacing, sheetWidth, sheetHeight);
+      const svgContent = exportToSVG(panels, params, nestingSpacing, sheetWidth, sheetHeight, {
+        strategy: nestingStrategy,
+        allowRotation
+      });
       const fileName = customFileName && customFileName.trim() !== ''
         ? (customFileName.endsWith('.svg') ? customFileName : `${customFileName}.svg`)
         : `laser_box_${params.width}x${params.height}x${params.depth}_${params.boxType}.svg`;
@@ -2008,33 +2020,17 @@ export default function App() {
                     spacing={nestingSpacing}
                     sheetWidth={sheetWidth}
                     sheetHeight={sheetHeight}
+                    nestingStrategy={nestingStrategy}
+                    allowRotation={allowRotation}
                     onSheetWidthChange={setSheetWidth}
                     onSheetHeightChange={setSheetHeight}
+                    onSpacingChange={setNestingSpacing}
+                    onNestingStrategyChange={setNestingStrategy}
+                    onAllowRotationChange={setAllowRotation}
                     onExportSVG={handleExportSVG}
                     onExportDXF={handleExportDXF}
                     onSendToStaff={handleSendToStaff}
                   />
-                </div>
-
-                {/* Flat nesting parameters panel */}
-                <div className="bg-white border border-slate-200 p-5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between shrink-0 shadow-sm select-none gap-4">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-600 max-w-xl">
-                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>Nesting margins prevent cross-scoring during laser cuts. Standard space is 6-10 mm.</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-700">Sheet Padding:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="40"
-                      value={nestingSpacing}
-                      onChange={(e) => setNestingSpacing(Math.max(1, Math.min(50, Number(e.target.value))))}
-                      className="w-16 bg-white border border-slate-200 text-blue-600 font-extrabold font-mono text-center rounded py-1 px-1.5 focus:border-blue-500 focus:outline-none"
-                    />
-                    <span className="text-[10px] uppercase font-bold text-slate-500 font-sans tracking-wide">mm</span>
-                  </div>
                 </div>
               </div>
             )}
