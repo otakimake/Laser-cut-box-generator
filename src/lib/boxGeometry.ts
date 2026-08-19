@@ -59,7 +59,7 @@ export interface PanelData {
   engravePaths?: Point2D[][];
 }
 
-export type ShapeCutoutType = 'rectangle' | 'circle' | 'slot' | 'polygon' | 'star';
+export type ShapeCutoutType = 'rectangle' | 'slot' | 'circle';
 
 export interface ShapeCutoutConfig {
   id: string;
@@ -74,9 +74,9 @@ export interface ShapeCutoutConfig {
   offsetY: number;     // Offset Y from panel center in mm
   rotation: number;    // Rotation in degrees (-360 to +360)
   cutType: 'cut' | 'engrave'; // 'cut' = through hole cutout, 'engrave' = surface vector score
-  polygonSides?: number; // 3 to 12 sides for regular polygon
-  starPoints?: number;   // 4 to 12 points for star
-  starInnerRatio?: number; // Inner radius ratio (0.2 to 0.8)
+  polygonSides?: number;
+  starPoints?: number;
+  starInnerRatio?: number;
   enabled: boolean;
 }
 
@@ -407,29 +407,6 @@ export function generateShapeCutoutPoints(
       // Capsule / Pill shape: radius is half of minimum dimension
       const pillRadius = Math.min(shape.width, shape.height) / 2;
       return createRoundedRectPoints(cx, cy, shape.width, shape.height, pillRadius, shape.rotation, 10);
-    }
-    case 'polygon': {
-      const polyRadius = Math.min(shape.width, shape.height) / 2;
-      return createRegularPolygonPoints(cx, cy, polyRadius, shape.polygonSides || 6, shape.rotation);
-    }
-    case 'star': {
-      const outerR = Math.min(shape.width, shape.height) / 2;
-      const innerR = outerR * (shape.starInnerRatio || 0.45);
-      const pts = createStarPoints(cx, cy, outerR, innerR, shape.starPoints || 5);
-      if (shape.rotation !== 0) {
-        const rad = (shape.rotation * Math.PI) / 180;
-        const cosA = Math.cos(rad);
-        const sinA = Math.sin(rad);
-        return pts.map((p) => {
-          const dx = p.x - cx;
-          const dy = p.y - cy;
-          return {
-            x: cx + dx * cosA - dy * sinA,
-            y: cy + dx * sinA + dy * cosA
-          };
-        });
-      }
-      return pts;
     }
     case 'rectangle':
     default:

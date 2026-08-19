@@ -7,8 +7,7 @@ import React, { useState } from 'react';
 import {
   ShapeCutoutConfig,
   ShapeCutoutType,
-  PanelData,
-  createRoundedRectPoints
+  PanelData
 } from '../lib/boxGeometry';
 import {
   Scissors,
@@ -23,7 +22,6 @@ import {
   EyeOff,
   Link,
   Unlink,
-  Sparkles,
   Layers,
   Maximize2,
   Check,
@@ -84,15 +82,12 @@ export default function ShapeCutoutManager({
       offsetY: 0,
       rotation: 0,
       cutType: 'cut',
-      polygonSides: 6,
-      starPoints: 5,
-      starInnerRatio: 0.45,
       enabled: true
     };
     onAddCutout(newCutout);
     onSelectCutout(newId);
     if (onTriggerFeedback) {
-      onTriggerFeedback(`Added ${newCutout.name} with ${customR}mm corner radius`, 'success');
+      onTriggerFeedback(`Added ${newCutout.name}`, 'success');
     }
   };
 
@@ -133,66 +128,39 @@ export default function ShapeCutoutManager({
       </div>
 
       <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-200 flex flex-col gap-4 shadow-sm">
-        {/* Quick Add Presets Bar */}
+        {/* Quick Add Presets Bar - Only Pill Slot, Rectangle, and Circle */}
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold text-slate-700">Add Shape Cutout</span>
-            <span className="text-[9px] text-slate-400 font-sans">With Corner Radius</span>
+            <span className="text-[9px] text-slate-400 font-sans">Pill Slot • Rectangle • Circle</span>
           </div>
 
           <div className="grid grid-cols-3 gap-1.5">
             <button
-              onClick={() => handleCreateDefaultCutout('rectangle', 40, 25, 5, 'Rounded Window')}
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
-              title="Add Rounded Rectangle with adjustable corner radius"
-            >
-              <div className="w-3.5 h-3.5 border border-blue-600 rounded-xs group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] leading-tight">Rounded Rect</span>
-            </button>
-
-            <button
-              onClick={() => handleCreateDefaultCutout('slot', 50, 16, 8, 'Vent Slot')}
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
+              onClick={() => handleCreateDefaultCutout('slot', 50, 16, 8, 'Pill Slot')}
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2.5 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
               title="Add Pill / Capsule vent slot"
             >
-              <div className="w-4 h-2 border border-blue-600 rounded-full group-hover:scale-110 transition-transform" />
+              <div className="w-5 h-2.5 border-2 border-blue-600 rounded-full group-hover:scale-110 transition-transform" />
               <span className="text-[10px] leading-tight">Pill Slot</span>
             </button>
 
             <button
-              onClick={() => handleCreateDefaultCutout('circle', 30, 30, 0, 'Circular Port')}
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
+              onClick={() => handleCreateDefaultCutout('rectangle', 40, 25, 5, 'Rectangle')}
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2.5 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
+              title="Add Rectangle with adjustable corner radius"
+            >
+              <div className="w-4 h-3 border-2 border-blue-600 rounded-xs group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] leading-tight">Rectangle</span>
+            </button>
+
+            <button
+              onClick={() => handleCreateDefaultCutout('circle', 30, 30, 0, 'Circle Port')}
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2.5 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
               title="Add Circle or Ellipse hole"
             >
-              <Circle className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] leading-tight">Circle / Port</span>
-            </button>
-
-            <button
-              onClick={() => handleCreateDefaultCutout('rectangle', 30, 30, 0, 'Sharp Square')}
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
-              title="Add Sharp Corner Rectangle (0mm radius)"
-            >
-              <Square className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] leading-tight">Sharp Rect</span>
-            </button>
-
-            <button
-              onClick={() => handleCreateDefaultCutout('polygon', 36, 36, 0, 'Hexagon')}
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
-              title="Add Regular Polygon (Hexagon/Triangle/Octagon)"
-            >
-              <span className="text-xs text-blue-600 font-mono font-extrabold group-hover:scale-110 transition-transform">⬡</span>
-              <span className="text-[10px] leading-tight">Polygon</span>
-            </button>
-
-            <button
-              onClick={() => handleCreateDefaultCutout('star', 38, 38, 0, 'Star Aperture')}
-              className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 p-2 rounded-lg text-slate-700 text-xs font-bold transition-all shadow-xs group cursor-pointer"
-              title="Add Star cut aperture"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] leading-tight">Star Cut</span>
+              <Circle className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform stroke-[2]" />
+              <span className="text-[10px] leading-tight">Circle</span>
             </button>
           </div>
         </div>
@@ -229,10 +197,6 @@ export default function ShapeCutoutManager({
                           <Circle className="w-3.5 h-3.5 text-blue-600" />
                         ) : cutout.shapeType === 'slot' ? (
                           <div className="w-4 h-2 border border-blue-600 rounded-full" />
-                        ) : cutout.shapeType === 'polygon' ? (
-                          <span className="text-[11px] text-blue-600 font-extrabold font-mono">⬡</span>
-                        ) : cutout.shapeType === 'star' ? (
-                          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                         ) : (
                           <div className={`w-3.5 h-2.5 border border-blue-600 ${cutout.cornerRadius > 0 ? 'rounded-xs' : ''}`} />
                         )}
@@ -250,7 +214,7 @@ export default function ShapeCutoutManager({
                           </span>
                         </div>
                         <span className="text-[9px] text-slate-500 leading-none mt-0.5 font-mono truncate">
-                          {cutout.width}×{cutout.height}mm {cutout.cornerRadius > 0 ? `(r:${cutout.cornerRadius}mm)` : '(sharp)'} • <span className="text-blue-600 font-bold uppercase">{panelTargets}</span>
+                          {cutout.width}×{cutout.height}mm {cutout.shapeType === 'slot' ? '(pill)' : cutout.cornerRadius > 0 ? `(r:${cutout.cornerRadius}mm)` : '(sharp)'} • <span className="text-blue-600 font-bold uppercase">{panelTargets}</span>
                         </span>
                       </div>
                     </div>
@@ -306,7 +270,7 @@ export default function ShapeCutoutManager({
         {/* Selected Cutout Parameters Form */}
         {activeCutout ? (
           <div className="flex flex-col gap-4 mt-1 pt-2">
-            {/* Cutout Title & Shape Visualizer Header */}
+            {/* Cutout Title & Header */}
             <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-2">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">
@@ -408,21 +372,19 @@ export default function ShapeCutoutManager({
               </div>
             </div>
 
-            {/* Shape Geometry Type Selector */}
+            {/* Shape Geometry Type Selector - Only Pill Slot, Rectangle, Circle */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] font-semibold text-slate-500">Shape Geometry</span>
               <div className="grid grid-cols-3 gap-1.5 text-xs">
                 {[
-                  { id: 'rectangle', label: 'Rounded Rect', icon: '🔲' },
-                  { id: 'slot', label: 'Capsule Slot', icon: '💊' },
-                  { id: 'circle', label: 'Circle / Oval', icon: '⭕' },
-                  { id: 'polygon', label: 'Polygon', icon: '⬡' },
-                  { id: 'star', label: 'Star Cut', icon: '⭐' }
+                  { id: 'slot', label: 'Pill Slot', icon: '💊' },
+                  { id: 'rectangle', label: 'Rectangle', icon: '🔲' },
+                  { id: 'circle', label: 'Circle', icon: '⭕' }
                 ].map((st) => (
                   <button
                     key={st.id}
                     onClick={() => handleUpdate({ shapeType: st.id as ShapeCutoutType })}
-                    className={`py-1.5 px-2 rounded-lg border text-center font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    className={`py-2 px-2 rounded-lg border text-center font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       activeCutout.shapeType === st.id
                         ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-xs'
                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -556,7 +518,7 @@ export default function ShapeCutoutManager({
               </div>
             </div>
 
-            {/* CORNER RADIUS CONTROL (Primary User Feature) */}
+            {/* CORNER RADIUS CONTROL (For Rectangle and Pill Slot) */}
             {(activeCutout.shapeType === 'rectangle' || activeCutout.shapeType === 'slot') && (
               <div className="bg-white p-3 rounded-lg border-2 border-blue-300 shadow-sm flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -665,59 +627,6 @@ export default function ShapeCutoutManager({
                     Full (Max)
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Polygon / Star Specific Sliders */}
-            {activeCutout.shapeType === 'polygon' && (
-              <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-semibold text-slate-600">Polygon Sides</span>
-                  <span className="text-xs font-mono font-bold text-blue-600">{activeCutout.polygonSides || 6}</span>
-                </div>
-                <input
-                  type="range"
-                  min="3"
-                  max="12"
-                  step="1"
-                  value={activeCutout.polygonSides || 6}
-                  onChange={(e) => handleUpdate({ polygonSides: Number(e.target.value) })}
-                  className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
-                />
-              </div>
-            )}
-
-            {activeCutout.shapeType === 'star' && (
-              <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-semibold text-slate-600">Star Points</span>
-                  <span className="text-xs font-mono font-bold text-blue-600">{activeCutout.starPoints || 5}</span>
-                </div>
-                <input
-                  type="range"
-                  min="4"
-                  max="12"
-                  step="1"
-                  value={activeCutout.starPoints || 5}
-                  onChange={(e) => handleUpdate({ starPoints: Number(e.target.value) })}
-                  className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
-                />
-
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-semibold text-slate-600">Inner Depth Ratio</span>
-                  <span className="text-xs font-mono font-bold text-blue-600">
-                    {Math.round((activeCutout.starInnerRatio || 0.45) * 100)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0.2"
-                  max="0.8"
-                  step="0.05"
-                  value={activeCutout.starInnerRatio || 0.45}
-                  onChange={(e) => handleUpdate({ starInnerRatio: Number(e.target.value) })}
-                  className="w-full accent-blue-600 h-1 bg-slate-200 rounded cursor-pointer"
-                />
               </div>
             )}
 
@@ -849,7 +758,7 @@ export default function ShapeCutoutManager({
             <Scissors className="w-6 h-6 text-slate-400" />
             <span className="text-xs font-bold text-slate-700">No Shape Cutout Selected</span>
             <span className="text-[10px] text-slate-500 max-w-xs leading-normal">
-              Click a preset button above to create a rounded cutout, pill slot, or custom aperture with adjustable corner radius.
+              Click a preset above to create a Pill Slot, Rectangle (with corner radius), or Circle cutout.
             </span>
           </div>
         )}
