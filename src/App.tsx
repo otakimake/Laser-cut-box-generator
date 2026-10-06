@@ -16,6 +16,7 @@ import {
   generateShapeCutoutPoints
 } from './lib/boxGeometry';
 import { traceImage } from './lib/imageTracer';
+import { renderTextToImageData } from './lib/textEngraver';
 import ThreeBoxViewer from './components/ThreeBoxViewer';
 import FlatSheetLayout from './components/FlatSheetLayout';
 import ShapeCutoutManager from './components/ShapeCutoutManager';
@@ -37,6 +38,7 @@ import {
   Cpu,
   MousePointer,
   Image,
+  Type,
   Sliders,
   Trash2,
   Link,
@@ -441,6 +443,11 @@ export default function App() {
   interface EngravingConfig {
     id: string;
     name: string;
+    type?: 'image' | 'text';
+    text?: string;
+    fontFamily?: string;
+    isBold?: boolean;
+    isItalic?: boolean;
     imgData: ImageData;
     imgDims: { w: number; h: number };
     panelId: string;
@@ -888,6 +895,74 @@ export default function App() {
     if (!activeEngravingId) return;
     setEngravings((prev) =>
       prev.map((eng) => (eng.id === activeEngravingId ? { ...eng, ...fields } : eng))
+    );
+  };
+
+  const handleAddTextEngraving = (customText: string = 'CUSTOM BOX') => {
+    const font = 'Inter, system-ui, sans-serif';
+    const { imgData, dims } = renderTextToImageData(customText, font, true, false, 72);
+    const newId = Date.now().toString();
+    const newEngraving: EngravingConfig = {
+      id: newId,
+      name: `Text: "${customText}"`,
+      type: 'text',
+      text: customText,
+      fontFamily: font,
+      isBold: true,
+      isItalic: false,
+      imgData,
+      imgDims: dims,
+      panelId: 'top',
+      panelIds: ['top'],
+      scale: 50,
+      offsetX: 0,
+      offsetY: 0,
+      rotation: 0,
+      traceThreshold: 128,
+      traceInvert: false,
+      traceSmoothing: 2,
+      traceCenterline: false
+    };
+    setEngravings((prev) => [...prev, newEngraving]);
+    setActiveEngravingId(newId);
+    triggerFeedback(`Text "${customText}" added for laser engraving!`, 'success');
+  };
+
+  const handleTextEngravingChange = (
+    id: string,
+    updates: { text?: string; fontFamily?: string; isBold?: boolean; isItalic?: boolean }
+  ) => {
+    setEngravings((prev) =>
+      prev.map((eng) => {
+        if (eng.id !== id) return eng;
+        const nextText = updates.text !== undefined ? updates.text : eng.text || 'Text';
+        const nextFont = updates.fontFamily !== undefined ? updates.fontFamily : eng.fontFamily || 'Inter, system-ui, sans-serif';
+        const nextBold = updates.isBold !== undefined ? updates.isBold : eng.isBold !== false;
+        const nextItalic = updates.isItalic !== undefined ? updates.isItalic : !!eng.isItalic;
+
+        const { imgData, dims } = renderTextToImageData(
+          nextText,
+          nextFont,
+          nextBold,
+          nextItalic,
+          72
+        );
+
+        const shortLabel = nextText.trim()
+          ? `Text: "${nextText.length > 18 ? nextText.slice(0, 18) + '…' : nextText}"`
+          : 'Text Engraving';
+
+        return {
+          ...eng,
+          name: shortLabel,
+          text: nextText,
+          fontFamily: nextFont,
+          isBold: nextBold,
+          isItalic: nextItalic,
+          imgData,
+          imgDims: dims
+        };
+      })
     );
   };
 
@@ -1513,99 +1588,128 @@ export default function App() {
             </h3>
 
             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-200 flex flex-col gap-4 shadow-sm">
-              {/* File Upload Trigger (Always available to add more images) */}
+              {/* Add New Artwork or Text Engraving */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold text-slate-700">Add New Image to Trace</span>
-                <label className="flex flex-col items-center justify-center border border-dashed border-blue-250 hover:border-blue-500 bg-white rounded-xl p-4 cursor-pointer transition-all hover:bg-slate-50 group shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-semibold text-slate-600 group-hover:text-slate-850">Choose an image file</span>
-                  </div>
-                  <span className="text-[9px] text-slate-400 mt-1">PNG, JPG, BMP, WEBP</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          const img = document.createElement('img');
-                          img.src = event.target?.result as string;
-                          img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const MAX_DIM = 400;
-                            let w = img.width;
-                            let h = img.height;
-                            if (w > MAX_DIM || h > MAX_DIM) {
-                              if (w > h) {
-                                h = Math.round((h * MAX_DIM) / w);
-                                w = MAX_DIM;
-                              } else {
-                                w = Math.round((w * MAX_DIM) / h);
-                                h = MAX_DIM;
+                <span className="text-xs font-bold text-slate-700">Add Engraving Element</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* File Upload Trigger */}
+                  <label className="flex flex-col items-center justify-center border border-dashed border-blue-300 hover:border-blue-500 bg-white rounded-xl p-3 cursor-pointer transition-all hover:bg-blue-50/50 group shadow-xs text-center">
+                    <div className="flex items-center gap-1.5">
+                      <Image className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-slate-700 group-hover:text-blue-750">Upload Image</span>
+                    </div>
+                    <span className="text-[9px] text-slate-400 mt-0.5">PNG, JPG, BMP</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const img = document.createElement('img');
+                            img.src = event.target?.result as string;
+                            img.onload = () => {
+                              const canvas = document.createElement('canvas');
+                              const MAX_DIM = 400;
+                              let w = img.width;
+                              let h = img.height;
+                              if (w > MAX_DIM || h > MAX_DIM) {
+                                if (w > h) {
+                                  h = Math.round((h * MAX_DIM) / w);
+                                  w = MAX_DIM;
+                                } else {
+                                  w = Math.round((w * MAX_DIM) / h);
+                                  h = MAX_DIM;
+                                }
                               }
-                            }
-                            canvas.width = w;
-                            canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            if (ctx) {
-                              ctx.drawImage(img, 0, 0, w, h);
-                              const imgData = ctx.getImageData(0, 0, w, h);
-                              const newEngraving: EngravingConfig = {
-                                id: Date.now().toString(),
-                                name: file.name,
-                                imgData,
-                                imgDims: { w, h },
-                                panelId: 'top', // Default to top panel
-                                panelIds: ['top'],
-                                scale: 60,
-                                offsetX: 0,
-                                offsetY: 0,
-                                rotation: 0,
-                                traceThreshold: 128,
-                                traceInvert: false,
-                                traceSmoothing: 2,
-                                traceCenterline: false
-                              };
-                              setEngravings((prev) => [...prev, newEngraving]);
-                              setActiveEngravingId(newEngraving.id);
-                              triggerFeedback('Image successfully added for vector engraving!', 'success');
-                            }
+                              canvas.width = w;
+                              canvas.height = h;
+                              const ctx = canvas.getContext('2d');
+                              if (ctx) {
+                                ctx.drawImage(img, 0, 0, w, h);
+                                const imgData = ctx.getImageData(0, 0, w, h);
+                                const newEngraving: EngravingConfig = {
+                                  id: Date.now().toString(),
+                                  name: file.name,
+                                  type: 'image',
+                                  imgData,
+                                  imgDims: { w, h },
+                                  panelId: 'top', // Default to top panel
+                                  panelIds: ['top'],
+                                  scale: 60,
+                                  offsetX: 0,
+                                  offsetY: 0,
+                                  rotation: 0,
+                                  traceThreshold: 128,
+                                  traceInvert: false,
+                                  traceSmoothing: 2,
+                                  traceCenterline: false
+                                };
+                                setEngravings((prev) => [...prev, newEngraving]);
+                                setActiveEngravingId(newEngraving.id);
+                                triggerFeedback('Image successfully added for vector engraving!', 'success');
+                              }
+                            };
                           };
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </label>
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Add Text Engraving Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleAddTextEngraving('CUSTOM BOX')}
+                    className="flex flex-col items-center justify-center border border-dashed border-purple-300 hover:border-purple-600 bg-white rounded-xl p-3 cursor-pointer transition-all hover:bg-purple-50/50 group shadow-xs text-center"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Type className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-slate-700 group-hover:text-purple-750">Add Text</span>
+                    </div>
+                    <span className="text-[9px] text-slate-400 mt-0.5">Custom Inscription</span>
+                  </button>
+                </div>
               </div>
 
               {/* List of engravings */}
               {engravings.length > 0 && (
                 <div className="flex flex-col gap-2 border-b border-blue-100 pb-3">
-                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Engraved Images ({engravings.length})</span>
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Active Engravings ({engravings.length})</span>
                   <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto">
                     {engravings.map((eng) => {
                       const isActive = eng.id === activeEngravingId;
+                      const isText = eng.type === 'text';
                       return (
                         <div
                           key={eng.id}
                           onClick={() => setActiveEngravingId(eng.id)}
                           className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
                             isActive
-                              ? 'bg-blue-50 border-blue-500 text-slate-900 shadow-sm'
+                              ? isText
+                                ? 'bg-purple-50/70 border-purple-400 text-slate-900 shadow-sm'
+                                : 'bg-blue-50 border-blue-500 text-slate-900 shadow-sm'
                               : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-7 h-7 rounded border flex items-center justify-center shrink-0 ${isActive ? 'bg-blue-100 border-blue-300' : 'bg-slate-50 border-slate-200'}`}>
-                              <Image className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                            </div>                             <div className="flex flex-col min-w-0">
+                            <div className={`w-7 h-7 rounded border flex items-center justify-center shrink-0 ${
+                              isActive
+                                ? isText ? 'bg-purple-100 border-purple-300' : 'bg-blue-100 border-blue-300'
+                                : 'bg-slate-50 border-slate-200'
+                            }`}>
+                              {isText ? (
+                                <Type className={`w-3.5 h-3.5 ${isActive ? 'text-purple-600' : 'text-slate-500'}`} />
+                              ) : (
+                                <Image className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
                               <span className="text-[11px] font-bold truncate leading-tight">{eng.name}</span>
                               <span className="text-[9px] text-slate-500 leading-none mt-0.5 uppercase font-mono">
-                                Panels: <span className="text-blue-600 font-bold">{(eng.panelIds && eng.panelIds.length > 0) ? eng.panelIds.join(', ') : eng.panelId}</span> • {eng.scale}%
+                                Panels: <span className={isText ? 'text-purple-600 font-bold' : 'text-blue-600 font-bold'}>{(eng.panelIds && eng.panelIds.length > 0) ? eng.panelIds.join(', ') : eng.panelId}</span> • {eng.scale}%
                               </span>
                             </div>
                           </div>
@@ -1639,7 +1743,7 @@ export default function App() {
                                   const remaining = engravings.filter((item) => item.id !== eng.id);
                                   setActiveEngravingId(remaining.length > 0 ? remaining[0].id : null);
                                 }
-                                triggerFeedback('Removed engraved artwork', 'info');
+                                triggerFeedback('Removed engraved item', 'info');
                               }}
                               className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-500 transition-all cursor-pointer"
                               title="Delete artwork"
@@ -1662,22 +1766,120 @@ export default function App() {
                     if (!activeEng) {
                       return (
                         <p className="text-[10px] text-slate-500 text-center py-2">
-                          Select an image above to edit its parameters.
+                          Select an engraving element above to edit its parameters.
                         </p>
                       );
                     }
 
                     const rawPathsLength = (engravedPathsMap[activeEng.id] || []).length;
+                    const isText = activeEng.type === 'text';
 
                     return (
                       <div className="flex flex-col gap-4">
                         <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-0.5">
-                          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Editing Image Settings</span>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${isText ? 'text-purple-600' : 'text-blue-600'}`}>
+                              {isText ? 'Editing Text Engraving' : 'Editing Image Settings'}
+                            </span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${isText ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {isText ? 'Text Mode' : 'Vector Image'}
+                            </span>
+                          </div>
                           <span className="text-xs font-bold text-slate-750 truncate">{activeEng.name}</span>
                           <span className="text-[9px] text-slate-500 font-mono">
-                            {activeEng.imgDims.w}x{activeEng.imgDims.h}px ({rawPathsLength} loops)
+                            {activeEng.imgDims.w}x{activeEng.imgDims.h}px ({rawPathsLength} vector loops)
                           </span>
                         </div>
+
+                        {/* Dedicated Text Controls if Text Engraving */}
+                        {isText && (
+                          <div className="bg-white p-3 rounded-xl border border-purple-200 shadow-xs flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <Type className="w-3.5 h-3.5 text-purple-600" />
+                                Inscription Content
+                              </span>
+                              <span className="text-[9px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                Vector Font
+                              </span>
+                            </div>
+
+                            {/* Text Input */}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[11px] font-semibold text-slate-500">Engraving Text</label>
+                                <span className="text-[9px] text-slate-400 font-mono">{(activeEng.text || '').length} chars</span>
+                              </div>
+                              <textarea
+                                rows={2}
+                                value={activeEng.text ?? ''}
+                                onChange={(e) => handleTextEngravingChange(activeEng.id, { text: e.target.value })}
+                                placeholder="Type inscription (supports multi-line)..."
+                                className="w-full text-xs font-medium p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:bg-white text-slate-800 transition-all resize-y"
+                              />
+                            </div>
+
+                            {/* Font Family Selector */}
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[11px] font-semibold text-slate-500">Font Typography</label>
+                              <select
+                                value={activeEng.fontFamily || 'Inter, system-ui, sans-serif'}
+                                onChange={(e) => handleTextEngravingChange(activeEng.id, { fontFamily: e.target.value })}
+                                className="w-full text-xs font-medium p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:bg-white cursor-pointer"
+                              >
+                                <option value="Inter, system-ui, sans-serif">Inter (Modern Clean Sans)</option>
+                                <option value="Georgia, serif">Georgia (Classic Serif)</option>
+                                <option value="Impact, 'Arial Black', sans-serif">Impact (Bold Heavy Display)</option>
+                                <option value="'Courier New', Courier, monospace">Courier (Technical Mono)</option>
+                                <option value="'Brush Script MT', cursive">Brush Script (Handwriting / Cursive)</option>
+                                <option value="'Trebuchet MS', sans-serif">Trebuchet MS (Geometric)</option>
+                              </select>
+                            </div>
+
+                            {/* Font Style Toggles */}
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleTextEngravingChange(activeEng.id, { isBold: activeEng.isBold === false })}
+                                className={`flex-1 py-1.5 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                  activeEng.isBold !== false
+                                    ? 'bg-purple-50 border-purple-400 text-purple-700 shadow-xs'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                Bold (B)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTextEngravingChange(activeEng.id, { isItalic: !activeEng.isItalic })}
+                                className={`flex-1 py-1.5 px-3 rounded-lg border text-xs italic transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                  activeEng.isItalic
+                                    ? 'bg-purple-50 border-purple-400 text-purple-700 font-semibold shadow-xs'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                Italic (I)
+                              </button>
+                            </div>
+
+                            {/* Quick Presets */}
+                            <div className="flex flex-col gap-1.5 pt-1.5 border-t border-slate-100">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Quick Inscriptions</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {['MADE WITH LOVE', 'CUSTOM BOX', '2026 EDITION', 'KEEP OUT', 'FRAGILE', 'TREASURE'].map((preset) => (
+                                  <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => handleTextEngravingChange(activeEng.id, { text: preset })}
+                                    className="text-[10px] font-medium bg-slate-100 hover:bg-purple-100 hover:text-purple-700 text-slate-600 px-2 py-0.5 rounded border border-slate-200 transition-colors cursor-pointer"
+                                  >
+                                    {preset}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                     {/* Target Panels Checkbox Grid */}
                     <div className="flex flex-col gap-1.5">
